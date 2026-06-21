@@ -45,7 +45,7 @@ export default function UsersPage() {
 
       <main className="flex-1 p-6 lg:p-10 max-w-7xl mx-auto w-full flex flex-col gap-8">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Registered Donors</h1>
+          <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">Registered Donors</h1>
           <p className="text-sm text-slate-400 mt-1">Search donor profiles, filter by blood type, and coordinate via WhatsApp or Chat</p>
         </div>
 
@@ -83,7 +83,7 @@ export default function UsersPage() {
           </div>
         ) : (
           <div className="glass p-6.5 rounded-3xl border border-slate-900 flex flex-col gap-5 shadow-lg">
-            <h3 className="font-extrabold text-white text-lg flex items-center gap-2">
+            <h3 className="font-extrabold text-slate-100 text-lg flex items-center gap-2">
               <Users className="w-5 h-5 text-red-500" /> Donor Directory
             </h3>
 
@@ -104,7 +104,7 @@ export default function UsersPage() {
                   >
                     <div className="flex justify-between items-start gap-4">
                       <div>
-                        <p className="font-bold text-white text-base truncate">{item.username}</p>
+                        <p className="font-bold text-slate-100 text-base truncate">{item.username}</p>
                         <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
                           <MapPin className="w-3.5 h-3.5 text-slate-500" /> {item.profile?.city || 'Nairobi'}
                         </p>

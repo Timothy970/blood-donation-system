@@ -102,7 +102,7 @@ export default function RegisterPage() {
             <Heart className="w-7 h-7 text-white fill-white" />
           </Link>
           <div>
-            <h2 className="text-2xl font-black tracking-tight text-white">Create Donor Profile</h2>
+            <h2 className="text-2xl font-black tracking-tight text-slate-100">Create Donor Profile</h2>
             <p className="text-xs text-slate-400 mt-1">Register to start logging donations and receiving alerts</p>
           </div>
         </div>

@@ -105,7 +105,7 @@ export default function RewardsPage() {
 
       <main className="flex-1 p-6 lg:p-10 max-w-7xl mx-auto w-full flex flex-col gap-8">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Gamified Rewards</h1>
+          <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">Gamified Rewards</h1>
           <p className="text-sm text-slate-400 mt-1">Acquire XP points for donations and download certified badges</p>
         </div>
 
@@ -124,7 +124,7 @@ export default function RewardsPage() {
                     <Trophy className="w-10 h-10" />
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-white text-lg">No Badge Earned Yet</h3>
+                    <h3 className="font-extrabold text-slate-100 text-lg">No Badge Earned Yet</h3>
                     <p className="text-xs text-slate-400 max-w-xs mt-1.5 mx-auto leading-normal">
                       You need at least 50 points to unlock the Bronze Certificate. Current progress: {rewards?.total_points || 0} / 50 XP.
                     </p>
@@ -147,7 +147,7 @@ export default function RewardsPage() {
                     <span className="text-red-500 font-extrabold text-xs tracking-widest mt-4">BLOODHERO NETWORK</span>
                     <div>
                       <h4 className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Certificate of Commendation</h4>
-                      <p className="text-2xl font-black text-white tracking-tight mt-6 uppercase">
+                      <p className="text-2xl font-black text-slate-100 tracking-tight mt-6 uppercase">
                         {typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}').username : 'Blood Hero'}
                       </p>
                       <p className="text-xs text-slate-400 mt-2 max-w-md mx-auto leading-normal">
@@ -180,7 +180,7 @@ export default function RewardsPage() {
             {/* Right - Tiers breakdown */}
             <div className="lg:col-span-5 flex flex-col gap-6">
               <div className="glass p-6 rounded-3xl border border-slate-900 flex flex-col gap-4 shadow-md">
-                <h3 className="font-extrabold text-white text-base">Badge Levels</h3>
+                <h3 className="font-extrabold text-slate-100 text-base">Badge Levels</h3>
                 <p className="text-xs text-slate-400 leading-normal">
                   Log donations to earn points (approx. 10 points per 100ml donated). Accumulate points to climb badge levels:
                 </p>
@@ -200,7 +200,7 @@ export default function RewardsPage() {
                         <div className="flex items-center gap-3.5">
                           <Award className={`w-5 h-5 ${tier.color}`} />
                           <div>
-                            <p className="font-bold text-white text-sm">{tier.name} Tier</p>
+                            <p className="font-bold text-slate-100 text-sm">{tier.name} Tier</p>
                             <p className="text-[10px] text-slate-500 mt-0.5">Required: {tier.points} XP</p>
                           </div>
                         </div>

@@ -40,7 +40,7 @@ export default function LoginPage() {
             <Heart className="w-7 h-7 text-white fill-white" />
           </Link>
           <div>
-            <h2 className="text-2xl font-black tracking-tight text-white">Welcome Back</h2>
+            <h2 className="text-2xl font-black tracking-tight text-slate-100">Welcome Back</h2>
             <p className="text-xs text-slate-400 mt-1">Sign in to coordinate donations and track rewards</p>
           </div>
         </div>

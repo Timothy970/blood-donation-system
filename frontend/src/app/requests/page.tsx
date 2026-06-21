@@ -118,7 +118,7 @@ export default function RequestsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">SOS & Emergency Alerts</h1>
+            <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">SOS & Emergency Alerts</h1>
             <p className="text-sm text-slate-400 mt-1">Broadcast urgent requests and view real-time blood needs</p>
           </div>
 
@@ -159,7 +159,7 @@ export default function RequestsPage() {
         {/* Matching Donors Result Grid */}
         {matchedDonors.length > 0 && (
           <div className="bg-slate-900/40 border border-slate-900 p-6.5 rounded-3xl flex flex-col gap-4 shadow-xl">
-            <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+            <h3 className="font-extrabold text-slate-100 text-base flex items-center gap-2">
               <Users className="w-5 h-5 text-red-500" /> Compatible Matches Found Nearby
             </h3>
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -167,7 +167,7 @@ export default function RequestsPage() {
                 <div key={idx} className="bg-slate-950 border border-slate-900 p-4.5 rounded-2xl hover:border-slate-800 transition">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="font-bold text-white text-sm">{donor.username}</p>
+                      <p className="font-bold text-slate-100 text-sm">{donor.username}</p>
                       <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
                         <MapPin className="w-3.5 h-3.5 text-slate-500" /> {donor.city}
                       </p>
@@ -204,10 +204,10 @@ export default function RequestsPage() {
             {showForm && (
               <div className="lg:col-span-12 glass p-6 rounded-3xl border border-red-500/20 shadow-2xl flex flex-col gap-5">
                 <div className="flex justify-between items-center border-b border-slate-900/60 pb-3">
-                  <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                  <h3 className="font-bold text-slate-100 text-lg flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 text-red-500 animate-pulse" /> Broadcast SOS Request
                   </h3>
-                  <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-white text-xs">
+                  <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-100 text-xs">
                     Cancel
                   </button>
                 </div>
@@ -317,7 +317,7 @@ export default function RequestsPage() {
 
             {/* Requests List */}
             <div className="lg:col-span-12 glass p-6.5 rounded-3xl border border-slate-900 flex flex-col gap-5 shadow-lg">
-              <h3 className="font-extrabold text-white text-lg flex items-center gap-2">
+              <h3 className="font-extrabold text-slate-100 text-lg flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-red-500" /> Active Blood Requests
               </h3>
 
@@ -347,7 +347,7 @@ export default function RequestsPage() {
                       <div className="flex justify-between items-start gap-4">
                         <div>
                           <div className="flex items-center gap-2.5">
-                            <span className="font-black text-white text-base">
+                            <span className="font-black text-slate-100 text-base">
                               {req.first_name} {req.last_name}
                             </span>
                             {req.is_emergency && (

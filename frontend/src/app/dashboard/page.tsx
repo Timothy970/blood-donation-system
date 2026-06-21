@@ -115,7 +115,7 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">Donor Console</h1>
+            <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">Donor Console</h1>
             <p className="text-sm text-slate-400 mt-1">Monitor metrics, schedule bookings, and claim rewards</p>
           </div>
 
@@ -142,7 +142,7 @@ export default function Dashboard() {
               {showLogForm && (
                 <div className="glass p-6 rounded-3xl border border-red-500/20 shadow-2xl flex flex-col gap-5">
                   <div className="flex justify-between items-center border-b border-slate-900/60 pb-3">
-                    <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                    <h3 className="font-bold text-slate-100 text-lg flex items-center gap-2">
                       <Droplet className="w-5 h-5 text-red-500 fill-red-500/20" /> Log Completed Donation
                     </h3>
                     <button onClick={() => setShowLogForm(false)} className="text-slate-400 hover:text-white text-xs">
@@ -251,7 +251,7 @@ export default function Dashboard() {
                   <div className="absolute right-0 bottom-0 w-24 h-24 bg-red-600/5 blur-[25px] rounded-full pointer-events-none" />
                   <div className="flex flex-col gap-2">
                     <span className="text-slate-400 text-xs font-semibold">Total Points</span>
-                    <span className="text-3xl font-black text-white">{rewards?.total_points || 0}</span>
+                    <span className="text-3xl font-black text-slate-100">{rewards?.total_points || 0}</span>
                   </div>
                   <div className="bg-red-950/40 border border-red-900/20 p-3 rounded-2xl text-red-500">
                     <Award className="w-6 h-6" />
@@ -275,7 +275,7 @@ export default function Dashboard() {
                   <div className="absolute right-0 bottom-0 w-24 h-24 bg-red-600/5 blur-[25px] rounded-full pointer-events-none" />
                   <div className="flex flex-col gap-2">
                     <span className="text-slate-400 text-xs font-semibold">Total Donations</span>
-                    <span className="text-3xl font-black text-white">{donations.length}</span>
+                    <span className="text-3xl font-black text-slate-100">{donations.length}</span>
                   </div>
                   <div className="bg-red-950/40 border border-red-900/20 p-3 rounded-2xl text-red-500">
                     <Calendar className="w-6 h-6" />
@@ -285,7 +285,7 @@ export default function Dashboard() {
 
               {/* Donation History List */}
               <div className="glass p-6.5 rounded-3xl flex flex-col gap-5">
-                <h3 className="font-extrabold text-white text-lg flex items-center gap-2">
+                <h3 className="font-extrabold text-slate-100 text-lg flex items-center gap-2">
                   <Clock className="w-5 h-5 text-red-500" /> Donation Logs
                 </h3>
 
@@ -306,7 +306,7 @@ export default function Dashboard() {
                             {d.blood_type}
                           </div>
                           <div>
-                            <p className="font-bold text-white text-sm flex items-center gap-1.5">
+                            <p className="font-bold text-slate-100 text-sm flex items-center gap-1.5">
                               <MapPin className="w-3.5 h-3.5 text-slate-500" /> {d.location}
                             </p>
                             <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
@@ -349,7 +349,7 @@ export default function Dashboard() {
                     {cooling.eligible ? <CheckCircle2 className="w-7 h-7" /> : <Clock className="w-7 h-7 animate-pulse" />}
                   </div>
                   <div>
-                    <h4 className="font-bold text-white text-base leading-tight">
+                    <h4 className="font-bold text-slate-100 text-base leading-tight">
                       {cooling.eligible ? 'Ready to Donate' : 'Waiting Period'}
                     </h4>
                     <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">{cooling.message}</p>
@@ -364,7 +364,7 @@ export default function Dashboard() {
 
               {/* Pre-donation test card */}
               <div className="glass p-6 rounded-3xl border border-slate-900 flex flex-col gap-4">
-                <h4 className="font-bold text-white text-sm">Eligibility Checklist</h4>
+                <h4 className="font-bold text-slate-100 text-sm">Eligibility Checklist</h4>
                 <p className="text-xs text-slate-400 leading-normal">
                   Before booking an appointment, please review the requirements below:
                 </p>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Navigation from '@/components/Navigation';
 import { bookingApi, Booking, User, getCurrentUser } from '@/lib/api';
-import { Calendar, Clock, MapPin, CheckCircle, Trash2, HelpCircle, Activity, Heart } from 'lucide-react';
+import { Calendar, Clock, MapPin, CheckCircle, Trash2, HelpCircle, Activity, Heart, AlertCircle } from 'lucide-react';
 
 export default function BookPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -104,7 +104,7 @@ export default function BookPage() {
 
       <main className="flex-1 p-6 lg:p-10 max-w-7xl mx-auto w-full flex flex-col gap-8">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Donation Booking</h1>
+          <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">Donation Booking</h1>
           <p className="text-sm text-slate-400 mt-1">Schedule appointment times and check active bookings</p>
         </div>
 
@@ -131,7 +131,7 @@ export default function BookPage() {
           <div className="grid lg:grid-cols-12 gap-8 items-start">
             {/* Form */}
             <div className="lg:col-span-5 glass p-6.5 rounded-3xl border border-slate-900 flex flex-col gap-5 shadow-lg">
-              <h3 className="font-extrabold text-white text-lg flex items-center gap-2">
+              <h3 className="font-extrabold text-slate-100 text-lg flex items-center gap-2">
                 <Heart className="w-5 h-5 text-red-500 fill-red-500/20" /> Book Slot
               </h3>
 
@@ -214,7 +214,7 @@ export default function BookPage() {
 
             {/* List */}
             <div className="lg:col-span-7 glass p-6.5 rounded-3xl border border-slate-900 flex flex-col gap-5 shadow-lg">
-              <h3 className="font-extrabold text-white text-lg flex items-center gap-2">
+              <h3 className="font-extrabold text-slate-100 text-lg flex items-center gap-2">
                 <Clock className="w-5 h-5 text-red-500" /> Scheduled Bookings
               </h3>
 
@@ -238,7 +238,7 @@ export default function BookPage() {
                           <Calendar className="w-6 h-6" />
                         </div>
                         <div>
-                          <p className="font-bold text-white text-sm">
+                          <p className="font-bold text-slate-100 text-sm">
                             {booking.first_name} {booking.last_name}
                           </p>
                           <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
@@ -253,16 +253,15 @@ export default function BookPage() {
                       </div>
 
                       <div className="flex sm:flex-col justify-between items-center sm:items-end gap-3 self-end sm:self-center">
-                        <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg border ${
-                          booking.status === 'Pending' 
-                            ? 'bg-amber-950/30 border-amber-900/30 text-amber-500' 
+                        <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg border ${booking.status === 'Pending'
+                            ? 'bg-amber-950/30 border-amber-900/30 text-amber-500'
                             : booking.status === 'Completed'
-                            ? 'bg-emerald-950/30 border-emerald-900/30 text-emerald-400'
-                            : 'bg-slate-900 border-slate-800 text-slate-500'
-                        }`}>
+                              ? 'bg-emerald-950/30 border-emerald-900/30 text-emerald-400'
+                              : 'bg-slate-900 border-slate-800 text-slate-500'
+                          }`}>
                           {booking.status}
                         </span>
-                        
+
                         {booking.status === 'Pending' && (
                           <button
                             onClick={() => handleDelete(booking.id)}

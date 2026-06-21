@@ -168,7 +168,7 @@ export default function ChatPage() {
               activeChat ? 'hidden md:flex' : 'flex'
             }`}>
               <div className="p-6 border-b border-slate-900">
-                <h3 className="font-extrabold text-white text-lg flex items-center gap-2">
+                <h3 className="font-extrabold text-slate-100 text-lg flex items-center gap-2">
                   <MessageSquare className="w-5 h-5 text-red-500" /> Active Conversations
                 </h3>
               </div>
@@ -203,7 +203,7 @@ export default function ChatPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-center">
-                            <span className="font-bold text-white text-sm truncate">{row.other_user.username}</span>
+                            <span className="font-bold text-slate-100 text-sm truncate">{row.other_user.username}</span>
                             <span className="text-[10px] text-slate-500 shrink-0">
                               {row.timestamp ? new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                             </span>
@@ -233,7 +233,7 @@ export default function ChatPage() {
                     <div className="flex items-center gap-3">
                       <button 
                         onClick={() => setActiveChat(null)} 
-                        className="md:hidden text-slate-400 hover:text-white mr-2 text-sm font-bold"
+                        className="md:hidden text-slate-400 hover:text-slate-100 mr-2 text-sm font-bold"
                       >
                         ← Back
                       </button>
@@ -241,7 +241,7 @@ export default function ChatPage() {
                         {activeChat.other_user.username.substring(0, 2)}
                       </div>
                       <div>
-                        <h4 className="font-bold text-white text-sm">{activeChat.other_user.username}</h4>
+                        <h4 className="font-bold text-slate-100 text-sm">{activeChat.other_user.username}</h4>
                         <p className="text-[10px] text-red-400 font-bold mt-0.5">Blood: {activeChat.other_user.profile?.blood_type || 'A+'}</p>
                       </div>
                     </div>
@@ -307,7 +307,7 @@ export default function ChatPage() {
                     <MessageSquare className="w-10 h-10" />
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-white text-base">Select a Conversation</h3>
+                    <h3 className="font-extrabold text-slate-100 text-base">Select a Conversation</h3>
                     <p className="text-xs text-slate-500 max-w-xs mt-1.5 leading-normal">
                       Pick a contact from the panel on the left or search the donor directory to coordinate blood transfers.
                     </p>

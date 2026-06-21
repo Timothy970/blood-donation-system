@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Heart, Home, Calendar, AlertCircle, Award, MessageSquare, Users, User, LogOut } from 'lucide-react';
 import { authApi, getCurrentUser, requestApi, User as UserType } from '@/lib/api';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -60,13 +61,16 @@ export default function Navigation() {
             <div className="bg-red-600 p-2 rounded-lg">
               <Heart className="w-5 h-5 text-white fill-white" />
             </div>
-            <span className="font-extrabold text-lg text-white">BloodHero</span>
+            <span className="font-extrabold text-lg text-slate-100">BloodHero</span>
           </Link>
-          {sosCount > 0 && (
-            <span className="lg:hidden bg-red-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center animate-pulse">
-              {sosCount}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            <ThemeToggle className="lg:hidden" />
+            {sosCount > 0 && (
+              <span className="lg:hidden bg-red-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center animate-pulse">
+                {sosCount}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* User Card */}
@@ -75,7 +79,7 @@ export default function Navigation() {
             {user.username.substring(0, 2)}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm text-white truncate">{user.username}</p>
+            <p className="font-semibold text-sm text-slate-100 truncate">{user.username}</p>
             <p className="text-xs text-red-400 font-bold truncate">Blood Type: {user.profile?.blood_type || 'A+'}</p>
           </div>
         </div>
@@ -92,7 +96,7 @@ export default function Navigation() {
                 className={`flex items-center gap-3.5 px-4.5 py-3 rounded-xl text-sm font-semibold transition shrink-0 ${
                   isActive
                     ? 'bg-red-950/30 border border-red-950 text-red-500'
-                    : 'text-slate-400 hover:bg-slate-900 hover:text-white border border-transparent'
+                    : 'text-slate-400 hover:bg-slate-900 hover:text-slate-100 border border-transparent'
                 }`}
               >
                 <Icon className="w-5 h-5" />
@@ -108,15 +112,16 @@ export default function Navigation() {
         </nav>
       </div>
 
-      {/* Logout */}
-      <div className="p-4 border-t border-slate-900 hidden lg:block">
+      {/* Logout & Theme Toggle */}
+      <div className="p-4 border-t border-slate-900 hidden lg:flex items-center justify-between gap-3">
         <button
           onClick={handleLogout}
-          className="flex w-full items-center gap-3.5 px-4.5 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:bg-slate-900/60 hover:text-red-400 border border-transparent transition"
+          className="flex-1 flex items-center gap-3.5 px-4.5 py-3 rounded-xl text-sm font-semibold text-slate-500 hover:bg-slate-900/60 hover:text-red-400 border border-transparent transition"
         >
           <LogOut className="w-5 h-5" />
           <span>Sign Out</span>
         </button>
+        <ThemeToggle />
       </div>
     </aside>
   );

@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { StyleSheet, ScrollView, View, Text, TouchableOpacity, Linking, Platform, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { ThemeContext } from '@/context/theme-context';
 
 // Define Interface
 interface BloodRequest {
@@ -48,6 +49,7 @@ const MOCK_ALERTS: BloodRequest[] = [
 
 export default function HomeScreen() {
   const theme = useTheme();
+  const { colorScheme, toggleColorScheme } = useContext(ThemeContext);
   const [requests, setRequests] = useState<BloodRequest[]>(MOCK_ALERTS);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -101,14 +103,31 @@ export default function HomeScreen() {
     <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.brandContainer}>
-            <View style={styles.heartIcon}>
-              <Text style={styles.heartText}>♥</Text>
+        <View style={[styles.header, { borderBottomColor: theme.backgroundSelected }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View style={styles.brandContainer}>
+              <View style={styles.heartIcon}>
+                <Text style={styles.heartText}>♥</Text>
+              </View>
+              <Text style={[styles.brandTitle, { color: theme.text }]}>BloodHero</Text>
             </View>
-            <Text style={styles.brandTitle}>BloodHero</Text>
+            <TouchableOpacity
+              onPress={toggleColorScheme}
+              style={{
+                padding: Spacing.two,
+                borderRadius: 10,
+                backgroundColor: theme.backgroundElement,
+                borderWidth: 1,
+                borderColor: theme.backgroundSelected,
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={{ fontSize: 16 }}>{colorScheme === 'dark' ? '☀️' : '🌙'}</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.headerSubtitle}>Active SOS Alerts Feed</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Active SOS Alerts Feed</Text>
         </View>
 
         <ScrollView
@@ -127,13 +146,13 @@ export default function HomeScreen() {
                   key={req.id}
                   style={[
                     styles.card,
-                    req.is_emergency ? styles.emergencyCard : styles.regularCard
+                    req.is_emergency ? styles.emergencyCard : [styles.regularCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]
                   ]}
                 >
                   <View style={styles.cardHeader}>
                     <View>
                       <View style={styles.nameRow}>
-                        <Text style={styles.cardName}>
+                        <Text style={[styles.cardName, { color: theme.text }]}>
                           {req.first_name} {req.last_name}
                         </Text>
                         {req.is_emergency && (
@@ -142,7 +161,7 @@ export default function HomeScreen() {
                           </View>
                         )}
                       </View>
-                      <Text style={styles.cardLocation}>📍 {req.location}</Text>
+                      <Text style={[styles.cardLocation, { color: theme.textSecondary }]}>📍 {req.location}</Text>
                     </View>
                     
                     <View style={styles.bloodCircle}>
@@ -150,8 +169,8 @@ export default function HomeScreen() {
                     </View>
                   </View>
 
-                  <View style={styles.cardFooter}>
-                    <Text style={styles.phoneText}>📞 {req.contact_number}</Text>
+                  <View style={[styles.cardFooter, { borderTopColor: theme.backgroundSelected }]}>
+                    <Text style={[styles.phoneText, { color: theme.textSecondary }]}>📞 {req.contact_number}</Text>
                     <TouchableOpacity
                       style={styles.respondButton}
                       onPress={() => handleRespond(req.contact_number, req.first_name)}
@@ -165,11 +184,11 @@ export default function HomeScreen() {
           )}
 
           {/* Compatibility Tips */}
-          <View style={styles.tipsSection}>
-            <Text style={styles.tipsTitle}>Compatibility Guide</Text>
-            <Text style={styles.tipText}>• O- is the Universal Donor: Can donate to any blood type.</Text>
-            <Text style={styles.tipText}>• AB+ is the Universal Recipient: Can receive from any blood type.</Text>
-            <Text style={styles.tipText}>• Always wait 56 days between consecutive whole blood donations.</Text>
+          <View style={[styles.tipsSection, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+            <Text style={[styles.tipsTitle, { color: theme.text }]}>Compatibility Guide</Text>
+            <Text style={[styles.tipText, { color: theme.textSecondary }]}>• O- is the Universal Donor: Can donate to any blood type.</Text>
+            <Text style={[styles.tipText, { color: theme.textSecondary }]}>• AB+ is the Universal Recipient: Can receive from any blood type.</Text>
+            <Text style={[styles.tipText, { color: theme.textSecondary }]}>• Always wait 56 days between consecutive whole blood donations.</Text>
           </View>
         </ScrollView>
       </SafeAreaView>

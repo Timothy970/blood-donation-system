@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { StyleSheet, ScrollView, View, Text, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { ThemeContext } from '@/context/theme-context';
 
 export default function ExploreScreen() {
   const theme = useTheme();
+  const { colorScheme, toggleColorScheme } = useContext(ThemeContext);
   
   // Mock Active User state for previewing
   const [donor, setDonor] = useState({
@@ -46,28 +48,48 @@ export default function ExploreScreen() {
           (r >= size - 4 && c < 4);
         const randomBlock = Math.random() > 0.45;
         const active = isCorner || randomBlock;
+        const pixelColor = active 
+          ? (colorScheme === 'dark' ? '#ffffff' : '#000000') 
+          : (colorScheme === 'dark' ? '#020617' : '#ffffff');
         cols.push(
           <View 
             key={`${r}-${c}`} 
             style={[
               styles.qrPixel, 
-              { backgroundColor: active ? '#ffffff' : '#020617' }
+              { backgroundColor: pixelColor }
             ]} 
           />
         );
       }
       matrix.push(<View key={r} style={styles.qrRow}>{cols}</View>);
     }
-    return <View style={styles.qrContainer}>{matrix}</View>;
+    return <View style={[styles.qrContainer, { backgroundColor: colorScheme === 'dark' ? '#020617' : '#ffffff', borderColor: theme.backgroundSelected }]}>{matrix}</View>;
   };
 
   return (
     <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Digital Donor Card</Text>
-          <Text style={styles.headerSubtitle}>Present card at clinics to log donations instantly</Text>
+        <View style={[styles.header, { borderBottomColor: theme.backgroundSelected }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>Digital Donor Card</Text>
+            <TouchableOpacity
+              onPress={toggleColorScheme}
+              style={{
+                padding: Spacing.two,
+                borderRadius: 10,
+                backgroundColor: theme.backgroundElement,
+                borderWidth: 1,
+                borderColor: theme.backgroundSelected,
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={{ fontSize: 16 }}>{colorScheme === 'dark' ? '☀️' : '🌙'}</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Present card at clinics to log donations instantly</Text>
         </View>
 
         <ScrollView
@@ -106,10 +128,10 @@ export default function ExploreScreen() {
           </View>
 
           {/* QR Code Presentation */}
-          <View style={styles.qrBox}>
-            <Text style={styles.qrLabel}>SCAN FOR CLINIC INTAKE</Text>
+          <View style={[styles.qrBox, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+            <Text style={[styles.qrLabel, { color: theme.text }]}>SCAN FOR CLINIC INTAKE</Text>
             {renderMockQR()}
-            <Text style={styles.qrDesc}>
+            <Text style={[styles.qrDesc, { color: theme.textSecondary }]}>
               Allows hospitals to scan your member profile and log donation quantity automatically.
             </Text>
           </View>
@@ -122,7 +144,7 @@ export default function ExploreScreen() {
             <Text style={[styles.statusTitle, { color: eligible ? '#34d399' : '#f87171' }]}>
               {eligible ? 'Eligible to Donate' : 'Waiting Period (Cooling Down)'}
             </Text>
-            <Text style={styles.statusDesc}>
+            <Text style={[styles.statusDesc, { color: theme.textSecondary }]}>
               {eligible 
                 ? 'Your red blood cells have recovered. You are fully eligible to donate whole blood!'
                 : `You recently donated on ${donor.last_donation}. Please wait another ${cooldownDays} days before booking your next appointment.`
