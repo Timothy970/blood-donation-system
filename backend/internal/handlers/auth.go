@@ -68,10 +68,16 @@ func Register(c *gin.Context) {
 		return
 	}
 
+	role := "user"
+	if strings.ToLower(req.Username) == "admin" {
+		role = "admin"
+	}
+
 	user := models.User{
 		Username:     req.Username,
 		Email:        req.Email,
 		PasswordHash: string(hashedPassword),
+		Role:         role,
 	}
 
 	// Start a transaction to create User & Profile together
@@ -202,4 +208,75 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Set("username", claims["username"].(string))
 		c.Next()
 	}
+}
+
+// UpdateProfile updates the current user's profile details.
+func UpdateProfile(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: Session missing"})
+		return
+	}
+
+	var req struct {
+		DateOfBirth  *time.Time `json:"date_of_birth"`
+		PhotoURL     *string    `json:"photo_url"`
+		Availability *string    `json:"availability"`
+		Gender       *string    `json:"gender"`
+		BloodType    *string    `json:"blood_type"`
+		City         *string    `json:"city"`
+		PhoneNumber  *string    `json:"phone_number"`
+		Latitude     *float64   `json:"latitude"`
+		Longitude    *float64   `json:"longitude"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var user models.User
+	if err := config.DB.Preload("Profile").First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Update profile fields if provided
+	if req.DateOfBirth != nil {
+		user.Profile.DateOfBirth = *req.DateOfBirth
+	}
+	if req.PhotoURL != nil {
+		user.Profile.PhotoURL = *req.PhotoURL
+	}
+	if req.Availability != nil {
+		user.Profile.Availability = *req.Availability
+	}
+	if req.Gender != nil {
+		user.Profile.Gender = *req.Gender
+	}
+	if req.BloodType != nil {
+		user.Profile.BloodType = *req.BloodType
+	}
+	if req.City != nil {
+		user.Profile.City = *req.City
+	}
+	if req.PhoneNumber != nil {
+		user.Profile.PhoneNumber = *req.PhoneNumber
+	}
+	if req.Latitude != nil {
+		user.Profile.Latitude = *req.Latitude
+	}
+	if req.Longitude != nil {
+		user.Profile.Longitude = *req.Longitude
+	}
+
+	if err := config.DB.Save(&user.Profile).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Profile updated successfully",
+		"user":    user,
+	})
 }

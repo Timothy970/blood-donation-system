@@ -70,6 +70,12 @@ export default function ChatPage() {
       setMessages(data);
       // Mark as read
       await chatApi.markRead(otherId);
+      window.dispatchEvent(new Event('chatUpdate'));
+      
+      // Reset the unread count in local chats state array
+      setChats(prevChats => prevChats.map(c => 
+        c.other_user.id === otherId ? { ...c, unread_count: 0 } : c
+      ));
     } catch (err) {
       console.error('Failed to load messages:', err);
     }
@@ -116,10 +122,20 @@ export default function ChatPage() {
       )) {
         setMessages((prev) => [...prev, newMsg]);
         // Call read ack
-        chatApi.markRead(activeChat.other_user.id).catch(console.error);
+        chatApi.markRead(activeChat.other_user.id)
+          .then(() => window.dispatchEvent(new Event('chatUpdate')))
+          .catch(console.error);
+
+        // Also update the latest message and clear unread count for this active chat in the sidebar list!
+        setChats(prevChats => prevChats.map(c => 
+          c.other_user.id === activeChat.other_user.id 
+            ? { ...c, latest_message: newMsg.content, unread_count: 0, timestamp: newMsg.created_at } 
+            : c
+        ));
       } else {
         // Increment unread count or reload chat lists
         loadChats();
+        window.dispatchEvent(new Event('chatUpdate'));
       }
     };
 
@@ -159,7 +175,7 @@ export default function ChatPage() {
         {loading ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <Activity className="w-10 h-10 text-red-500 animate-spin" />
-            <span className="text-slate-500 font-semibold">Tuning WebSocket Hub...</span>
+            <span className="text-slate-500 font-semibold">Tuning Blood Heroes...</span>
           </div>
         ) : (
           <div className="flex-1 flex h-full overflow-hidden">

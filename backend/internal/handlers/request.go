@@ -151,7 +151,15 @@ func GetBloodRequestsCount(c *gin.Context) {
 	var count int64
 	now := time.Now()
 
-	if err := config.DB.Model(&models.BloodRequest{}).Where("expires_at > ?", now).Count(&count).Error; err != nil {
+	query := config.DB.Model(&models.BloodRequest{}).Where("expires_at > ?", now)
+
+	if sinceStr := c.Query("since"); sinceStr != "" {
+		if sinceTime, err := time.Parse(time.RFC3339, sinceStr); err == nil {
+			query = query.Where("created_at > ?", sinceTime)
+		}
+	}
+
+	if err := query.Count(&count).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count requests"})
 		return
 	}

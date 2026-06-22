@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from 'react';
 import {
   Tabs,
   TabList,
@@ -9,6 +10,7 @@ import {
 import { SymbolView } from 'expo-symbols';
 import { Pressable, View, StyleSheet } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { addAuthListener, getCurrentUser } from '@/utils/api';
 
 import { ExternalLink } from './external-link';
 import { ThemedText } from './themed-text';
@@ -17,6 +19,17 @@ import { ThemedView } from './themed-view';
 import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
 
 export default function AppTabs() {
+  const [user, setUser] = useState<any>(getCurrentUser());
+
+  useEffect(() => {
+    const unsubscribe = addAuthListener((t, u) => {
+      setUser(u);
+    });
+    return unsubscribe;
+  }, []);
+
+  const isAdmin = user && user.role === 'admin';
+
   return (
     <Tabs>
       <TabSlot style={{ height: '100%' }} />
@@ -25,9 +38,20 @@ export default function AppTabs() {
           <TabTrigger name="home" href="/" asChild>
             <TabButton>Home</TabButton>
           </TabTrigger>
-          <TabTrigger name="explore" href="/explore" asChild>
-            <TabButton>Explore</TabButton>
+          <TabTrigger name="book" href="/book" asChild>
+            <TabButton>Book</TabButton>
           </TabTrigger>
+          <TabTrigger name="chat" href="/chat" asChild>
+            <TabButton>Chat</TabButton>
+          </TabTrigger>
+          <TabTrigger name="explore" href="/explore" asChild>
+            <TabButton>Profile</TabButton>
+          </TabTrigger>
+          {isAdmin && (
+            <TabTrigger name="admin" href={"/admin" as any} asChild>
+              <TabButton>Admin</TabButton>
+            </TabTrigger>
+          )}
         </CustomTabList>
       </TabList>
     </Tabs>
@@ -50,27 +74,16 @@ export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps
 
 export function CustomTabList(props: TabListProps) {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const colors = Colors[scheme];
 
   return (
     <View {...props} style={styles.tabListContainer}>
       <ThemedView type="backgroundElement" style={styles.innerContainer}>
         <ThemedText type="smallBold" style={styles.brandText}>
-          Expo Starter
+          BloodHero
         </ThemedText>
 
         {props.children}
-
-        <ExternalLink href="https://docs.expo.dev" asChild>
-          <Pressable style={styles.externalPressable}>
-            <ThemedText type="link">Docs</ThemedText>
-            <SymbolView
-              tintColor={colors.text}
-              name={{ ios: 'arrow.up.right.square', web: 'link' }}
-              size={12}
-            />
-          </Pressable>
-        </ExternalLink>
       </ThemedView>
     </View>
   );

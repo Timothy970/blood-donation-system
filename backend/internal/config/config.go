@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"blood-donation-system/backend/internal/models"
 
 	"github.com/joho/godotenv"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -79,4 +81,40 @@ func ConnectDatabase() {
 	}
 
 	fmt.Println("Database schemas auto-migrated successfully.")
+
+	// Auto seed admin account
+	var adminCount int64
+	DB.Model(&models.User{}).Where("username = ?", "admin").Count(&adminCount)
+	if adminCount == 0 {
+		fmt.Println("Admin account not found. Seeding default admin ('admin' / 'admin123')...")
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+		if err != nil {
+			log.Printf("Failed to hash admin password: %v", err)
+			return
+		}
+		admin := models.User{
+			Username:     "admin",
+			Email:        "admin@bloodhero.org",
+			PasswordHash: string(hashedPassword),
+			Role:         "admin",
+		}
+		if err := DB.Create(&admin).Error; err != nil {
+			log.Printf("Failed to seed admin user: %v", err)
+			return
+		}
+		profile := models.Profile{
+			UserID:       admin.ID,
+			DateOfBirth:  time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC),
+			Availability: "Anyday",
+			Gender:       "M",
+			BloodType:    "O-",
+			City:         "Nairobi",
+			PhoneNumber:  "+254700000000",
+		}
+		if err := DB.Create(&profile).Error; err != nil {
+			log.Printf("Failed to seed admin profile: %v", err)
+			return
+		}
+		fmt.Println("Default admin account successfully seeded.")
+	}
 }

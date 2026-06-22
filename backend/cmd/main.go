@@ -56,6 +56,7 @@ func main() {
 	{
 		// Profile & Users list
 		protected.GET("/users", handlers.GetUsersList)
+		protected.PUT("/profile", handlers.UpdateProfile)
 
 		// Booking & Schedules
 		protected.POST("/bookings", handlers.CreateBooking)
@@ -74,6 +75,19 @@ func main() {
 		protected.GET("/chats", handlers.GetChats)
 		protected.GET("/chats/:other_id/messages", handlers.GetChatMessages)
 		protected.POST("/chats/:other_id/read", handlers.MarkMessagesRead)
+
+		// Admin Routes (Inherits AuthMiddleware, adds AdminMiddleware)
+		adminGroup := protected.Group("/admin")
+		adminGroup.Use(handlers.AdminMiddleware())
+		{
+			adminGroup.GET("/stats", handlers.GetAdminStats)
+			adminGroup.GET("/users", handlers.GetAdminUsers)
+			adminGroup.DELETE("/users/:id", handlers.DeleteAdminUser)
+			adminGroup.GET("/bookings", handlers.GetAdminBookings)
+			adminGroup.PUT("/bookings/:id", handlers.UpdateAdminBooking)
+			adminGroup.GET("/requests", handlers.GetAdminRequests)
+			adminGroup.DELETE("/requests/:id", handlers.DeleteAdminRequest)
+		}
 	}
 
 	// WebSocket handler for real-time direct chat

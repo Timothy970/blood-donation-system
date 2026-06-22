@@ -5,6 +5,7 @@ export interface User {
   id: number;
   username: string;
   email: string;
+  role?: string;
   profile?: Profile;
 }
 
@@ -24,6 +25,7 @@ export interface Profile {
 
 export interface BloodRequest {
   id: number;
+  requester_id?: number;
   first_name: string;
   last_name: string;
   blood_type: string;
@@ -151,6 +153,15 @@ export const authApi = {
     return data;
   },
 
+  updateProfile: async (payload: any) => {
+    const data = await request<{ message: string; user: User }>('/profile', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    setCurrentUser(data.user);
+    return data;
+  },
+
   logout: () => {
     removeToken();
     removeCurrentUser();
@@ -167,7 +178,7 @@ export const bookingApi = {
 // Blood Requests APIs
 export const requestApi = {
   list: () => request<BloodRequest[]>('/requests'),
-  count: () => request<{ count: number }>('/requests/count'),
+  count: (since?: string) => request<{ count: number }>(`/requests/count${since ? `?since=${encodeURIComponent(since)}` : ''}`),
   create: (payload: any) => request<{ request: BloodRequest; matching_donors: any[]; message: string }>('/requests', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -190,6 +201,28 @@ export const chatApi = {
   messages: (otherId: number) => request<Message[]>(`/chats/${otherId}/messages`),
   markRead: (otherId: number) => request<{ marked_read: number }>(`/chats/${otherId}/read`, { method: 'POST' }),
   users: () => request<User[]>('/users'),
+};
+
+// Admin APIs
+export interface AdminStats {
+  total_users: number;
+  total_donations: number;
+  total_donation_volume_ml: number;
+  total_active_bookings: number;
+  total_active_requests: number;
+}
+
+export const adminApi = {
+  getStats: () => request<AdminStats>('/admin/stats'),
+  listUsers: () => request<User[]>('/admin/users'),
+  deleteUser: (id: number) => request<{ message: string }>(`/admin/users/${id}`, { method: 'DELETE' }),
+  listBookings: () => request<Booking[]>('/admin/bookings'),
+  updateBooking: (id: number, status: string) => request<Booking>(`/admin/bookings/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ status }),
+  }),
+  listRequests: () => request<BloodRequest[]>('/admin/requests'),
+  deleteRequest: (id: number) => request<{ message: string }>(`/admin/requests/${id}`, { method: 'DELETE' }),
 };
 
 // WebSocket connection string generator

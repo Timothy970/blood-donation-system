@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Heart, Home, Calendar, AlertCircle, Award, MessageSquare, Users, User, LogOut } from 'lucide-react';
-import { authApi, getCurrentUser, requestApi, User as UserType } from '@/lib/api';
+import { Heart, Home, Calendar, AlertCircle, Award, MessageSquare, Users, User, LogOut, Shield } from 'lucide-react';
+import { authApi, getCurrentUser, requestApi, chatApi, User as UserType } from '@/lib/api';
 import ThemeToggle from './ThemeToggle';
 
 export default function Navigation() {
@@ -12,6 +12,41 @@ export default function Navigation() {
   const router = useRouter();
   const [user, setUser] = useState<UserType | null>(null);
   const [sosCount, setSosCount] = useState(0);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+
+  useEffect(() => {
+    if (pathname === '/requests') {
+      localStorage.setItem('sos_last_viewed', new Date().toISOString());
+      setSosCount(0);
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    const handleChatUpdate = () => {
+      const currentUser = getCurrentUser();
+      if (!currentUser) return;
+      chatApi.list()
+        .then(chats => {
+          const totalUnread = chats.reduce((acc, row) => acc + row.unread_count, 0);
+          setUnreadMessageCount(totalUnread);
+        })
+        .catch(err => console.error(err));
+    };
+
+    const handleProfileUpdate = () => {
+      const currentUser = getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+      }
+    };
+
+    window.addEventListener('chatUpdate', handleChatUpdate);
+    window.addEventListener('profileUpdate', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('chatUpdate', handleChatUpdate);
+      window.removeEventListener('profileUpdate', handleProfileUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     const currentUser = getCurrentUser();
@@ -21,20 +56,33 @@ export default function Navigation() {
     }
     setUser(currentUser);
 
-    // Fetch active request counts
-    requestApi.count()
-      .then(res => setSosCount(res.count))
-      .catch(err => console.error(err));
+    const fetchData = () => {
+      // Fetch SOS count
+      if (pathname === '/requests') {
+        setSosCount(0);
+      } else {
+        const lastViewed = localStorage.getItem('sos_last_viewed');
+        requestApi.count(lastViewed || undefined)
+          .then(res => setSosCount(pathname === '/requests' ? 0 : res.count))
+          .catch(err => console.error(err));
+      }
 
-    // Poll count every 30s
-    const interval = setInterval(() => {
-      requestApi.count()
-        .then(res => setSosCount(res.count))
+      // Fetch Chat unread count
+      chatApi.list()
+        .then(chats => {
+          const totalUnread = chats.reduce((acc, row) => acc + row.unread_count, 0);
+          setUnreadMessageCount(totalUnread);
+        })
         .catch(err => console.error(err));
-    }, 30000);
+    };
+
+    fetchData();
+
+    // Poll every 15s to be more responsive to new messages
+    const interval = setInterval(fetchData, 15000);
 
     return () => clearInterval(interval);
-  }, [router]);
+  }, [router, pathname]);
 
   const handleLogout = () => {
     authApi.logout();
@@ -46,9 +94,14 @@ export default function Navigation() {
     { name: 'Book Donation', href: '/book', icon: Calendar },
     { name: 'SOS Alerts', href: '/requests', icon: AlertCircle, badge: sosCount > 0 ? sosCount : undefined },
     { name: 'Rewards', href: '/rewards', icon: Award },
-    { name: 'Live Chat', href: '/chat', icon: MessageSquare },
+    { name: 'Live Chat', href: '/chat', icon: MessageSquare, badge: unreadMessageCount > 0 ? unreadMessageCount : undefined },
     { name: 'Find Donors', href: '/users', icon: Users },
+    { name: 'Profile Settings', href: '/profile', icon: User },
   ];
+
+  if (user && user.role === 'admin') {
+    navItems.push({ name: 'Admin Panel', href: '/admin', icon: Shield });
+  }
 
   if (!user) return null;
 
@@ -65,11 +118,6 @@ export default function Navigation() {
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle className="lg:hidden" />
-            {sosCount > 0 && (
-              <span className="lg:hidden bg-red-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center animate-pulse">
-                {sosCount}
-              </span>
-            )}
           </div>
         </div>
 
@@ -99,10 +147,21 @@ export default function Navigation() {
                     : 'text-slate-400 hover:bg-slate-900 hover:text-slate-100 border border-transparent'
                 }`}
               >
-                <Icon className="w-5 h-5" />
+                <div className="relative">
+                  <Icon className="w-5 h-5" />
+                  {item.badge !== undefined && (
+                    <span className={`lg:hidden absolute -top-1.5 -right-1.5 text-white text-[8px] font-black min-w-[15px] h-3.5 rounded-full flex items-center justify-center px-0.5 ${
+                      item.name === 'SOS Alerts' ? 'bg-red-600 animate-pulse' : 'bg-blue-600'
+                    }`}>
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
                 <span className="hidden lg:inline">{item.name}</span>
                 {item.badge !== undefined && (
-                  <span className="hidden lg:flex ml-auto bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                  <span className={`hidden lg:flex ml-auto text-white text-xs font-bold px-2 py-0.5 rounded-full ${
+                    item.name === 'SOS Alerts' ? 'bg-red-600 animate-pulse' : 'bg-blue-600'
+                  }`}>
                     {item.badge}
                   </span>
                 )}

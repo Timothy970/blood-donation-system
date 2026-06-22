@@ -15,6 +15,7 @@ type User struct {
 	Username     string         `gorm:"unique;not null;type:varchar(100)" json:"username"`
 	Email        string         `gorm:"unique;not null;type:varchar(100)" json:"email"`
 	PasswordHash string         `gorm:"not null;type:varchar(255)" json:"-"`
+	Role         string         `gorm:"type:varchar(20);default:'user'" json:"role"`
 	Profile      Profile        `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"profile"`
 }
 
