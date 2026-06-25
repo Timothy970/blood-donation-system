@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { Suspense, useEffect, useState, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import { chatApi, ChatRow, Message, getWebSocketUrl, User, getCurrentUser } from '@/lib/api';
 import { MessageSquare, Send, Activity, User as UserIcon, Heart } from 'lucide-react';
 
-export default function ChatPage() {
+function ChatContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const otherIdParam = searchParams.get('other_id');
@@ -337,3 +337,17 @@ export default function ChatPage() {
     </div>
   );
 }
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 justify-center items-center gap-4">
+        <Activity className="w-10 h-10 text-red-500 animate-spin" />
+        <span className="text-slate-500 font-semibold">Tuning Blood Heroes...</span>
+      </div>
+    }>
+      <ChatContent />
+    </Suspense>
+  );
+}
+
