@@ -1,7 +1,10 @@
 import { Platform } from 'react-native';
 
-// Dynamically resolve backend host depending on execution platform (Android uses loopback 10.0.2.2)
+// Dynamically resolve backend host depending on environment variables or execution platform (Android uses loopback 10.0.2.2)
 export const getBaseUrl = (): string => {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
   if (Platform.OS === 'android') {
     return 'http://10.0.2.2:8080/api';
   }
@@ -10,10 +13,9 @@ export const getBaseUrl = (): string => {
 
 export const getWebSocketUrl = (): string => {
   const token = getToken();
-  if (Platform.OS === 'android') {
-    return `ws://10.0.2.2:8080/ws/chat?token=${encodeURIComponent(token || '')}`;
-  }
-  return `ws://localhost:8080/ws/chat?token=${encodeURIComponent(token || '')}`;
+  const baseWsUrl = process.env.EXPO_PUBLIC_WS_URL || 
+    (Platform.OS === 'android' ? 'ws://10.0.2.2:8080/ws/chat' : 'ws://localhost:8080/ws/chat');
+  return `${baseWsUrl}?token=${encodeURIComponent(token || '')}`;
 };
 
 // In-memory Auth session state
