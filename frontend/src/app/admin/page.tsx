@@ -1,115 +1,75 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
-import { adminApi, AdminStats, User, Booking, BloodRequest, getCurrentUser } from '@/lib/api';
-import { Shield, Users, Calendar, AlertCircle, Droplet, Clock, CheckCircle2, Trash2, Activity, UserMinus, ToggleLeft, Heart } from 'lucide-react';
-
-type TabType = 'overview' | 'bookings' | 'alerts' | 'users';
+import { Shield, Users, Calendar, AlertCircle, Trash2, CheckCircle2, Activity, MapPin } from 'lucide-react';
+import { adminApi, getCurrentUser, AdminStats, Booking, BloodRequest, User } from '@/lib/api';
 
 export default function AdminPage() {
-  const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
-  
-  // Data State
   const [stats, setStats] = useState<AdminStats | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [requests, setRequests] = useState<BloodRequest[]>([]);
-  
-  // Status State
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [submittingId, setSubmittingId] = useState<number | null>(null);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'alerts' | 'users'>('overview');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    loadAdminData();
+  }, []);
 
   const loadAdminData = async () => {
+    setErrorMsg('');
     try {
-      const [statsData, usersData, bookingsData, requestsData] = await Promise.all([
+      const [statsData, bookingsData, requestsData, usersData] = await Promise.all([
         adminApi.getStats(),
-        adminApi.listUsers(),
         adminApi.listBookings(),
-        adminApi.listRequests()
+        adminApi.listRequests(),
+        adminApi.listUsers(),
       ]);
+
       setStats(statsData);
-      setUsers(usersData);
-      setBookings(bookingsData);
-      setRequests(requestsData);
+      setBookings(bookingsData || []);
+      setRequests(requestsData || []);
+      setUsers(usersData || []);
     } catch (err: any) {
-      console.error('Failed to load admin console data:', err);
-      setError(err.message || 'Access denied or failed to load statistics.');
+      console.error(err);
+      setErrorMsg(err.message || 'Failed to query administration services.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const user = getCurrentUser();
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-    if (user.role !== 'admin') {
-      router.push('/dashboard');
-      return;
-    }
-    setCurrentUser(user);
-    loadAdminData();
-  }, []);
-
-  const handleUpdateBooking = async (id: number, status: 'Completed' | 'Cancelled') => {
-    setSubmittingId(id);
-    setError('');
-    setSuccess('');
+  const handleUpdateBookingStatus = async (id: number, status: string) => {
     try {
       await adminApi.updateBooking(id, status);
-      setSuccess(`Booking slot successfully marked as ${status}.`);
       loadAdminData();
     } catch (err: any) {
-      setError(err.message || 'Failed to update scheduled slot.');
-    } finally {
-      setSubmittingId(null);
+      setErrorMsg(err.message || 'Failed to update booking status.');
     }
   };
 
   const handleDeleteRequest = async (id: number) => {
     if (!confirm('Are you sure you want to resolve and delete this SOS request?')) return;
-    setSubmittingId(id);
-    setError('');
-    setSuccess('');
     try {
       await adminApi.deleteRequest(id);
-      setSuccess('SOS emergency request successfully closed.');
       loadAdminData();
     } catch (err: any) {
-      setError(err.message || 'Failed to resolve emergency request.');
-    } finally {
-      setSubmittingId(null);
+      setErrorMsg(err.message || 'Failed to delete SOS alert.');
     }
   };
 
-  const handleDeleteUser = async (id: number) => {
-    if (!confirm('CAUTION: Are you sure you want to permanently delete this user account? This deletes all profiles, logs, and booking contexts.')) return;
-    if (currentUser && currentUser.id === id) {
-      setError("You cannot delete your own admin account.");
-      return;
-    }
-    setSubmittingId(id);
-    setError('');
-    setSuccess('');
+  const handleDeleteUser = async (id: number, username: string) => {
+    if (!confirm(`Are you sure you want to permanently delete user "${username}"?`)) return;
     try {
       await adminApi.deleteUser(id);
-      setSuccess('User account successfully purged.');
       loadAdminData();
     } catch (err: any) {
-      setError(err.message || 'Failed to delete user.');
-    } finally {
-      setSubmittingId(null);
+      setErrorMsg(err.message || 'Failed to delete user.');
     }
   };
 
+  const currentUser = getCurrentUser();
   if (!currentUser) return null;
 
   return (
@@ -122,203 +82,128 @@ export default function AdminPage() {
           <div>
             <div className="flex items-center gap-3">
               <span className="w-3 h-3 rounded-full bg-[#00FF94] pulse-active shadow-[0_0_12px_rgba(0,255,148,0.8)]" />
-              <h1 className="font-headline text-3xl font-extrabold text-[#E5E2E3] tracking-tight flex items-center gap-3">
+              <h1 className="font-headline text-3xl font-extrabold text-[#1A1A1A] dark:text-[#E5E2E3] tracking-tight flex items-center gap-3">
                 <Shield className="w-8 h-8 text-[#FF5357]" />
                 <span>Admin Console</span>
               </h1>
             </div>
-            <p className="text-xs font-mono-hud text-[#00F1FE] mt-1 tracking-wider uppercase">GLOBAL OVERSIGHT OF MATCHES, SCHEDULED SLOTS & USER REGISTRIES</p>
+            <p className="text-xs font-mono-hud text-[#0096C7] dark:text-[#00F1FE] mt-1 tracking-wider uppercase">GLOBAL OVERSIGHT OF MATCHES, SCHEDULED SLOTS & USER REGISTRIES</p>
+          </div>
+
+          {/* Sub Navigation Tabs */}
+          <div className="flex items-center gap-1.5 bg-[#F1F3F5] dark:bg-[#0E0E0F] p-1.5 rounded-2xl border border-[#DEE2E6] dark:border-[#2A2A2B]">
+            {[
+              { key: 'overview', label: 'Overview' },
+              { key: 'bookings', label: 'Bookings' },
+              { key: 'alerts', label: 'SOS Alerts' },
+              { key: 'users', label: 'Users' },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                className={`px-4 py-2 rounded-xl text-xs font-headline font-bold transition cursor-pointer ${
+                  activeTab === tab.key
+                    ? 'bg-[#FF0033] text-white shadow-[0_0_15px_rgba(255,0,51,0.4)]'
+                    : 'text-[#6C757D] dark:text-[#919095] hover:text-[#1A1A1A] dark:hover:text-white'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Alerts Banner */}
-        {success && (
-          <div className="bg-[#00FF94]/15 border border-[#00FF94]/30 p-4.5 rounded-3xl text-[#00FF94] text-xs font-mono-hud flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-            <span>{success}</span>
+        {errorMsg && (
+          <div className="bg-[#FF0033]/15 border border-[#FF0033]/30 p-4 rounded-2xl text-[#FF5357] text-xs font-mono-hud flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <span>{errorMsg}</span>
           </div>
         )}
-        {error && (
-          <div className="bg-[#FF0033]/15 border border-[#FF0033]/30 p-4.5 rounded-3xl text-[#FF5357] text-xs font-mono-hud flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 flex-shrink-0 text-[#FF0033]" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {/* Tab Navigation */}
-        <div className="border-b border-[#2A2A2B] flex gap-2 overflow-x-auto pb-px">
-          {(['overview', 'bookings', 'alerts', 'users'] as TabType[]).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => {
-                setActiveTab(tab);
-                setError('');
-                setSuccess('');
-              }}
-              className={`px-6 py-3 border-b-2 font-headline font-bold text-xs uppercase tracking-wider transition whitespace-nowrap ${
-                activeTab === tab
-                  ? 'border-[#FF0033] text-[#FF5357] bg-[#FF0033]/10'
-                  : 'border-transparent text-[#919095] hover:text-[#E5E2E3]'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
 
         {loading ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 py-24">
             <Activity className="w-10 h-10 text-[#FF5357] animate-spin" />
-            <span className="text-[#919095] font-mono-hud text-xs">TUNING ADMIN CHANNELS...</span>
+            <span className="text-[#6C757D] dark:text-[#919095] font-mono-hud text-xs">TUNING ADMIN CHANNELS...</span>
           </div>
         ) : (
           <div className="flex flex-col gap-8">
-            {/* OVERVIEW TAB */}
+            {/* Overview Tab */}
             {activeTab === 'overview' && (
               <div className="flex flex-col gap-8">
-                {/* Stats Grid */}
+                {/* Metrics Grid */}
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {/* Total Donors */}
-                  <div className="glass-card p-6 rounded-3xl flex items-center justify-between shadow-sm relative overflow-hidden border border-[#2A2A2B]">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[#919095] text-[10px] font-mono-hud uppercase tracking-wider">TOTAL MEMBERS</span>
-                      <span className="text-3xl font-headline font-black text-[#E5E2E3]">{stats?.total_users || 0}</span>
-                    </div>
-                    <div className="bg-[#FF0033]/15 border border-[#FF0033]/30 p-3 rounded-2xl text-[#FF5357]">
-                      <Users className="w-6 h-6" />
-                    </div>
+                  <div className="glass-card p-6 rounded-3xl border border-[#E9ECEF] dark:border-[#2A2A2B] flex flex-col gap-2 shadow-sm">
+                    <span className="text-xs font-mono-hud text-[#6C757D] dark:text-[#919095] uppercase">TOTAL MEMBERS</span>
+                    <span className="font-headline font-black text-3xl text-[#1A1A1A] dark:text-[#E5E2E3]">{stats?.total_users || 0}</span>
                   </div>
 
-                  {/* Total Logged Donations */}
-                  <div className="glass-card p-6 rounded-3xl flex items-center justify-between shadow-sm relative overflow-hidden border border-[#2A2A2B]">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[#919095] text-[10px] font-mono-hud uppercase tracking-wider">LOGGED DONATIONS</span>
-                      <span className="text-3xl font-headline font-black text-[#E5E2E3]">{stats?.total_donations || 0}</span>
-                    </div>
-                    <div className="bg-[#FF0033]/15 border border-[#FF0033]/30 p-3 rounded-2xl text-[#FF5357]">
-                      <Calendar className="w-6 h-6" />
-                    </div>
+                  <div className="glass-card p-6 rounded-3xl border border-[#E9ECEF] dark:border-[#2A2A2B] flex flex-col gap-2 shadow-sm">
+                    <span className="text-xs font-mono-hud text-[#6C757D] dark:text-[#919095] uppercase">COMPLETED DONATIONS</span>
+                    <span className="font-headline font-black text-3xl text-[#FF5357]">{stats?.total_donations || 0}</span>
                   </div>
 
-                  {/* Total Volume Collected */}
-                  <div className="glass-card p-6 rounded-3xl flex items-center justify-between shadow-sm relative overflow-hidden border border-[#2A2A2B]">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[#919095] text-[10px] font-mono-hud uppercase tracking-wider">VOLUME (ML)</span>
-                      <span className="text-3xl font-headline font-black text-[#00FF94]">
-                        {stats?.total_donation_volume_ml ? `${stats.total_donation_volume_ml} ml` : '0 ml'}
-                      </span>
-                    </div>
-                    <div className="bg-[#00FF94]/15 border border-[#00FF94]/30 p-3 rounded-2xl text-[#00FF94]">
-                      <Droplet className="w-6 h-6" />
-                    </div>
+                  <div className="glass-card p-6 rounded-3xl border border-[#E9ECEF] dark:border-[#2A2A2B] flex flex-col gap-2 shadow-sm">
+                    <span className="text-xs font-mono-hud text-[#6C757D] dark:text-[#919095] uppercase">TOTAL VOLUME (ML)</span>
+                    <span className="font-headline font-black text-3xl text-[#00A86B] dark:text-[#00FF94]">{stats?.total_donation_volume_ml || 0} ml</span>
                   </div>
 
-                  {/* Active SOS requests */}
-                  <div className="glass-card p-6 rounded-3xl flex items-center justify-between shadow-sm relative overflow-hidden border border-[#2A2A2B]">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[#919095] text-[10px] font-mono-hud uppercase tracking-wider">ACTIVE SOS</span>
-                      <span className="text-3xl font-headline font-black text-[#00F1FE]">{stats?.total_active_requests || 0}</span>
-                    </div>
-                    <div className="bg-[#00F1FE]/15 border border-[#00F1FE]/30 p-3 rounded-2xl text-[#00F1FE]">
-                      <AlertCircle className="w-6 h-6 animate-pulse" />
-                    </div>
+                  <div className="glass-card p-6 rounded-3xl border border-[#E9ECEF] dark:border-[#2A2A2B] flex flex-col gap-2 shadow-sm">
+                    <span className="text-xs font-mono-hud text-[#6C757D] dark:text-[#919095] uppercase">ACTIVE SOS ALERTS</span>
+                    <span className="font-headline font-black text-3xl text-[#0096C7] dark:text-[#00F1FE]">{stats?.total_active_requests || 0}</span>
                   </div>
                 </div>
 
-                {/* Status Guide */}
-                <div className="glass-card p-6 rounded-3xl border border-[#2A2A2B] flex flex-col gap-4">
-                  <h3 className="font-headline font-bold text-[#E5E2E3] text-base uppercase tracking-wider">ADMINISTRATIVE OPERATIONS CHECKLIST</h3>
-                  <div className="grid md:grid-cols-3 gap-6 text-xs leading-relaxed text-[#919095]">
-                    <div className="flex flex-col gap-1 bg-[#0E0E0F] p-4 rounded-xl border border-[#2A2A2B]">
-                      <span className="font-headline font-bold text-[#E5E2E3] text-sm flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-[#FFAB00]" /> Donation Verification
-                      </span>
-                      Verify that booked donors completed their intake, check blood types, and mark schedules as completed to award matching XP badges.
-                    </div>
-                    <div className="flex flex-col gap-1 bg-[#0E0E0F] p-4 rounded-xl border border-[#2A2A2B]">
-                      <span className="font-headline font-bold text-[#E5E2E3] text-sm flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 text-[#FF5357] animate-pulse" /> SOS Resolution
-                      </span>
-                      Review the active SOS table. Clean up alerts that have been successfully resolved by clinics or match completions.
-                    </div>
-                    <div className="flex flex-col gap-1 bg-[#0E0E0F] p-4 rounded-xl border border-[#2A2A2B]">
-                      <span className="font-headline font-bold text-[#E5E2E3] text-sm flex items-center gap-2">
-                        <Users className="w-4 h-4 text-[#00F1FE]" /> Account Moderation
-                      </span>
-                      Monitor profiles for spam, ensure correct blood group entries, and perform profile audits to protect clinical intake integrity.
-                    </div>
+                {/* Operations Checklist */}
+                <div className="glass-card p-6.5 rounded-3xl border border-[#E9ECEF] dark:border-[#2A2A2B] flex flex-col gap-4 shadow-sm">
+                  <h3 className="font-headline font-bold text-base text-[#1A1A1A] dark:text-[#E5E2E3]">Administrative Operations Checklist</h3>
+                  <div className="flex flex-col gap-3 text-xs font-sans text-[#6C757D] dark:text-[#919095] leading-relaxed">
+                    <p>• <strong className="text-[#1A1A1A] dark:text-[#E5E2E3]">Bookings:</strong> Review pending clinic appointments and update status upon intake verification.</p>
+                    <p>• <strong className="text-[#1A1A1A] dark:text-[#E5E2E3]">SOS Emergency Broadcasts:</strong> Clear fulfilled emergency alerts from the regional broadcast network.</p>
+                    <p>• <strong className="text-[#1A1A1A] dark:text-[#E5E2E3]">User Directory:</strong> Audit member registrations and purge inactive or invalid accounts.</p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* BOOKINGS TAB */}
+            {/* Bookings Tab */}
             {activeTab === 'bookings' && (
-              <div className="glass-card p-6.5 rounded-3xl border border-[#2A2A2B] flex flex-col gap-5 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                <h3 className="font-headline font-bold text-[#E5E2E3] text-base flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-[#FF5357]" />
-                  <span>USER SCHEDULED BOOKINGS</span>
-                </h3>
-
+              <div className="glass-card p-6.5 rounded-3xl border border-[#E9ECEF] dark:border-[#2A2A2B] flex flex-col gap-5 shadow-sm">
+                <h3 className="font-headline font-bold text-base text-[#1A1A1A] dark:text-[#E5E2E3]">Appointment Bookings Directory</h3>
                 {bookings.length === 0 ? (
-                  <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
-                    <Calendar className="w-12 h-12 text-[#2A2A2B]" />
-                    <span className="font-headline font-bold text-sm text-[#E5E2E3]">No Bookings Recorded</span>
-                    <span className="text-xs font-mono-hud text-[#919095]">Scheduled appointments will appear here.</span>
-                  </div>
+                  <p className="text-xs font-mono-hud text-[#6C757D] dark:text-[#919095] py-8 text-center">No bookings logged in database.</p>
                 ) : (
-                  <div className="overflow-x-auto w-full">
-                    <table className="w-full text-left text-sm border-collapse font-sans">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs font-mono-hud">
                       <thead>
-                        <tr className="border-b border-[#2A2A2B] text-[#919095] font-mono-hud font-semibold text-xs uppercase">
-                          <th className="py-3 px-4">Donor Name</th>
-                          <th className="py-3 px-4">Date</th>
-                          <th className="py-3 px-4">Time Slot</th>
-                          <th className="py-3 px-4">Location</th>
-                          <th className="py-3 px-4">Status</th>
-                          <th className="py-3 px-4 text-right">Actions</th>
+                        <tr className="border-b border-[#DEE2E6] dark:border-[#2A2A2B] text-[#6C757D] dark:text-[#919095]">
+                          <th className="py-3 px-4">PATIENT NAME</th>
+                          <th className="py-3 px-4">LOCATION</th>
+                          <th className="py-3 px-4">DATE & TIME</th>
+                          <th className="py-3 px-4">STATUS</th>
+                          <th className="py-3 px-4 text-right">ACTION</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {bookings.map((booking) => (
-                          <tr key={booking.id} className="border-b border-[#2A2A2B]/60 hover:bg-[#1C1B1C]/50 transition">
-                            <td className="py-3.5 px-4 font-headline font-bold text-[#E5E2E3]">
-                              {booking.first_name} {booking.last_name}
-                            </td>
-                            <td className="py-3.5 px-4 font-mono-hud text-xs text-[#919095]">
-                              {new Date(booking.date).toLocaleDateString()}
-                            </td>
-                            <td className="py-3.5 px-4 font-mono-hud text-xs text-[#919095]">{booking.time_slot}</td>
-                            <td className="py-3.5 px-4 font-mono-hud text-xs text-[#00F1FE]">{booking.location}</td>
+                        {bookings.map(b => (
+                          <tr key={b.id} className="border-b border-[#DEE2E6]/60 dark:border-[#2A2A2B]/60 hover:bg-[#F1F3F5] dark:hover:bg-[#1C1B1C]">
+                            <td className="py-3.5 px-4 font-bold text-[#1A1A1A] dark:text-[#E5E2E3]">{b.first_name} {b.last_name}</td>
+                            <td className="py-3.5 px-4 text-[#0096C7] dark:text-[#00F1FE]">📍 {b.location}</td>
+                            <td className="py-3.5 px-4 text-[#6C757D] dark:text-[#919095]">{new Date(b.date).toLocaleDateString()} at {b.time_slot}</td>
                             <td className="py-3.5 px-4">
-                              <span className={`text-[10px] font-mono-hud font-extrabold uppercase px-2.5 py-1 rounded-lg border ${
-                                booking.status === 'Pending'
-                                  ? 'bg-[#FFAB00]/15 border-[#FFAB00]/40 text-[#FFAB00]'
-                                  : booking.status === 'Completed'
-                                    ? 'bg-[#00FF94]/15 border-[#00FF94]/40 text-[#00FF94]'
-                                    : 'bg-[#0E0E0F] border-[#2A2A2B] text-[#919095]'
+                              <span className={`px-2.5 py-1 rounded-md font-bold text-[10px] ${
+                                b.status === 'Completed' ? 'bg-[#00FF94]/20 text-[#00A86B] dark:text-[#00FF94]' : 'bg-[#FFAB00]/20 text-[#D97706] dark:text-[#FFAB00]'
                               }`}>
-                                {booking.status}
+                                {b.status}
                               </span>
                             </td>
                             <td className="py-3.5 px-4 text-right">
-                              {booking.status === 'Pending' && (
-                                <div className="flex justify-end gap-2">
-                                  <button
-                                    onClick={() => handleUpdateBooking(booking.id, 'Completed')}
-                                    disabled={submittingId === booking.id}
-                                    className="bg-[#00FF94]/20 hover:bg-[#00FF94]/30 text-[#00FF94] font-headline font-bold px-3 py-1.5 rounded-xl text-xs border border-[#00FF94]/40 transition disabled:opacity-50"
-                                  >
-                                    Verify Complete
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdateBooking(booking.id, 'Cancelled')}
-                                    disabled={submittingId === booking.id}
-                                    className="bg-[#1C1B1C] hover:bg-[#2A2A2B] text-[#919095] font-headline font-semibold px-3 py-1.5 rounded-xl text-xs border border-[#2A2A2B] transition disabled:opacity-50"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
+                              {b.status === 'Pending' && (
+                                <button
+                                  onClick={() => handleUpdateBookingStatus(b.id, 'Completed')}
+                                  className="bg-[#00A86B]/15 dark:bg-[#00FF94]/15 hover:bg-[#00A86B]/30 border border-[#00A86B]/30 text-[#00A86B] dark:text-[#00FF94] px-3 py-1 rounded-xl font-bold transition cursor-pointer"
+                                >
+                                  Verify Complete
+                                </button>
                               )}
                             </td>
                           </tr>
@@ -330,129 +215,76 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* SOS ALERTS TAB */}
+            {/* SOS Alerts Tab */}
             {activeTab === 'alerts' && (
-              <div className="glass-card p-6.5 rounded-3xl border border-[#2A2A2B] flex flex-col gap-5 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                <h3 className="font-headline font-bold text-[#E5E2E3] text-base flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-[#FF5357] animate-pulse" />
-                  <span>ACTIVE EMERGENCY SOS BROADCASTS</span>
-                </h3>
-
+              <div className="glass-card p-6.5 rounded-3xl border border-[#E9ECEF] dark:border-[#2A2A2B] flex flex-col gap-5 shadow-sm">
+                <h3 className="font-headline font-bold text-base text-[#1A1A1A] dark:text-[#E5E2E3]">Active Emergency SOS Broadcasts</h3>
                 {requests.length === 0 ? (
-                  <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
-                    <Heart className="w-12 h-12 text-[#2A2A2B]" />
-                    <span className="font-headline font-bold text-sm text-[#E5E2E3]">No Emergency Alerts Active</span>
-                    <span className="text-xs font-mono-hud text-[#919095]">Critical blood stock requirements are stable.</span>
-                  </div>
+                  <p className="text-xs font-mono-hud text-[#6C757D] dark:text-[#919095] py-8 text-center">No active emergency SOS alerts.</p>
                 ) : (
-                  <div className="overflow-x-auto w-full">
-                    <table className="w-full text-left text-sm border-collapse">
-                      <thead>
-                        <tr className="border-b border-[#2A2A2B] text-[#919095] font-mono-hud font-semibold text-xs uppercase">
-                          <th className="py-3 px-4">Recipient Name</th>
-                          <th className="py-3 px-4">Blood Group</th>
-                          <th className="py-3 px-4">Contact Number</th>
-                          <th className="py-3 px-4">Location</th>
-                          <th className="py-3 px-4">Flag</th>
-                          <th className="py-3 px-4 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {requests.map((req) => (
-                          <tr key={req.id} className="border-b border-[#2A2A2B]/60 hover:bg-[#1C1B1C]/50 transition">
-                            <td className="py-3.5 px-4 font-headline font-bold text-[#E5E2E3]">
-                              {req.first_name} {req.last_name}
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <span className="bg-[#FF0033]/20 border border-[#FF0033]/40 text-[#FF5357] font-mono-hud font-black text-xs px-2.5 py-1 rounded-lg">
-                                {req.blood_type}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 font-mono-hud text-xs text-[#919095]">{req.contact_number}</td>
-                            <td className="py-3.5 px-4 font-mono-hud text-xs text-[#00F1FE]">{req.location}</td>
-                            <td className="py-3.5 px-4">
-                              {req.is_emergency ? (
-                                <span className="bg-[#FF0033] text-white font-mono-hud font-extrabold text-[9px] px-2 py-0.5 rounded-md uppercase pulse-active shadow-[0_0_10px_rgba(255,0,51,0.6)]">SOS Emergency</span>
-                              ) : (
-                                <span className="bg-[#0E0E0F] border border-[#2A2A2B] text-[#919095] text-[10px] font-mono-hud font-bold uppercase px-2.5 py-1 rounded-lg">Standard</span>
-                              )}
-                            </td>
-                            <td className="py-3.5 px-4 text-right">
-                              <button
-                                onClick={() => handleDeleteRequest(req.id)}
-                                disabled={submittingId === req.id}
-                                className="text-[#919095] hover:text-[#FF5357] p-2 rounded-xl transition hover:bg-[#1C1B1C] disabled:opacity-50"
-                                title="Resolve Request"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {requests.map(r => (
+                      <div key={r.id} className="p-4 rounded-2xl bg-[#F1F3F5] dark:bg-[#0E0E0F] border border-[#DEE2E6] dark:border-[#2A2A2B] flex flex-col justify-between gap-3">
+                        <div>
+                          <div className="flex justify-between items-start">
+                            <h4 className="font-bold text-[#1A1A1A] dark:text-[#E5E2E3] text-sm">{r.first_name} {r.last_name}</h4>
+                            <span className="bg-[#FF0033]/15 text-[#FF5357] border border-[#FF0033]/30 text-xs font-bold px-2 py-0.5 rounded-lg">{r.blood_type}</span>
+                          </div>
+                          <p className="text-xs text-[#0096C7] dark:text-[#00F1FE] mt-1">📍 {r.location}</p>
+                          <p className="text-xs text-[#6C757D] dark:text-[#919095] mt-0.5">📞 {r.contact_number}</p>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteRequest(r.id)}
+                          className="bg-[#FF0033]/15 hover:bg-[#FF0033]/30 border border-[#FF0033]/30 text-[#FF5357] text-xs font-bold py-2 rounded-xl transition cursor-pointer"
+                        >
+                          Resolve SOS Alert
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
             )}
 
-            {/* USERS DIRECTORY TAB */}
+            {/* Users Tab */}
             {activeTab === 'users' && (
-              <div className="glass-card p-6.5 rounded-3xl border border-[#2A2A2B] flex flex-col gap-5 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                <h3 className="font-headline font-bold text-[#E5E2E3] text-base flex items-center gap-2">
-                  <Users className="w-5 h-5 text-[#FF5357]" />
-                  <span>REGISTERED MEMBER DIRECTORY</span>
-                </h3>
-
+              <div className="glass-card p-6.5 rounded-3xl border border-[#E9ECEF] dark:border-[#2A2A2B] flex flex-col gap-5 shadow-sm">
+                <h3 className="font-headline font-bold text-base text-[#1A1A1A] dark:text-[#E5E2E3]">Registered Member Registry</h3>
                 {users.length === 0 ? (
-                  <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
-                    <Users className="w-12 h-12 text-[#2A2A2B]" />
-                    <span className="font-headline font-bold text-sm text-[#E5E2E3]">No Members Found</span>
-                  </div>
+                  <p className="text-xs font-mono-hud text-[#6C757D] dark:text-[#919095] py-8 text-center">No users found.</p>
                 ) : (
-                  <div className="overflow-x-auto w-full">
-                    <table className="w-full text-left text-sm border-collapse">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs font-mono-hud">
                       <thead>
-                        <tr className="border-b border-[#2A2A2B] text-[#919095] font-mono-hud font-semibold text-xs uppercase">
-                          <th className="py-3 px-4">Username</th>
-                          <th className="py-3 px-4">Email</th>
-                          <th className="py-3 px-4">Blood Group</th>
-                          <th className="py-3 px-4">Availability</th>
-                          <th className="py-3 px-4">Role</th>
-                          <th className="py-3 px-4 text-right">Actions</th>
+                        <tr className="border-b border-[#DEE2E6] dark:border-[#2A2A2B] text-[#6C757D] dark:text-[#919095]">
+                          <th className="py-3 px-4">USERNAME</th>
+                          <th className="py-3 px-4">EMAIL</th>
+                          <th className="py-3 px-4">BLOOD TYPE</th>
+                          <th className="py-3 px-4">ROLE</th>
+                          <th className="py-3 px-4 text-right">ACTION</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {users.map((u) => (
-                          <tr key={u.id} className="border-b border-[#2A2A2B]/60 hover:bg-[#1C1B1C]/50 transition">
-                            <td className="py-3.5 px-4 font-headline font-bold text-[#E5E2E3]">
-                              {u.username}
-                            </td>
-                            <td className="py-3.5 px-4 font-mono-hud text-xs text-[#919095]">{u.email}</td>
+                        {users.map(u => (
+                          <tr key={u.id} className="border-b border-[#DEE2E6]/60 dark:border-[#2A2A2B]/60 hover:bg-[#F1F3F5] dark:hover:bg-[#1C1B1C]">
+                            <td className="py-3.5 px-4 font-bold text-[#1A1A1A] dark:text-[#E5E2E3]">{u.username}</td>
+                            <td className="py-3.5 px-4 text-[#6C757D] dark:text-[#919095]">{u.email}</td>
+                            <td className="py-3.5 px-4 text-[#FF5357] font-bold">{u.profile?.blood_type || 'A+'}</td>
                             <td className="py-3.5 px-4">
-                              <span className="bg-[#FF0033]/20 border border-[#FF0033]/40 text-[#FF5357] font-mono-hud font-bold text-xs px-2.5 py-1 rounded-lg">
-                                {u.profile?.blood_type || 'A+'}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 font-mono-hud text-xs text-[#919095]">{u.profile?.availability || 'Anyday'}</td>
-                            <td className="py-3.5 px-4">
-                              <span className={`text-[10px] font-mono-hud font-extrabold uppercase px-2 py-0.5 rounded ${
-                                u.role === 'admin' 
-                                  ? 'bg-[#FF0033] text-white shadow-[0_0_10px_rgba(255,0,51,0.4)]' 
-                                  : 'bg-[#0E0E0F] border border-[#2A2A2B] text-[#919095]'
+                              <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
+                                u.role === 'admin' ? 'bg-[#FF0033]/20 text-[#FF5357]' : 'bg-[#0096C7]/20 dark:bg-[#00F1FE]/20 text-[#0096C7] dark:text-[#00F1FE]'
                               }`}>
-                                {u.role || 'user'}
+                                {u.role}
                               </span>
                             </td>
                             <td className="py-3.5 px-4 text-right">
                               {u.role !== 'admin' && (
                                 <button
-                                  onClick={() => handleDeleteUser(u.id)}
-                                  disabled={submittingId === u.id}
-                                  className="text-[#919095] hover:text-[#FF5357] p-2 rounded-xl transition hover:bg-[#1C1B1C] disabled:opacity-50"
-                                  title="Delete User Account"
+                                  onClick={() => handleDeleteUser(u.id, u.username)}
+                                  className="text-[#FF5357] hover:bg-[#FF0033]/15 p-2 rounded-xl transition cursor-pointer"
+                                  title="Delete user"
                                 >
-                                  <UserMinus className="w-4 h-4" />
+                                  <Trash2 className="w-4 h-4" />
                                 </button>
                               )}
                             </td>
