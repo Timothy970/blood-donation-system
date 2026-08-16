@@ -11,9 +11,14 @@ export default function ThemeToggle({ className = '' }: ThemeToggleProps) {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
   useEffect(() => {
-    // Determine the current theme based on the presence of the .dark class
-    const isDark = document.documentElement.classList.contains('dark');
-    setTheme(isDark ? 'dark' : 'light');
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    if (savedTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+      setTheme('light');
+    } else {
+      document.documentElement.classList.add('dark');
+      setTheme('dark');
+    }
   }, []);
 
   const toggleTheme = () => {
@@ -31,11 +36,11 @@ export default function ThemeToggle({ className = '' }: ThemeToggleProps) {
   return (
     <button
       onClick={toggleTheme}
-      className={`p-2.5 rounded-xl border border-slate-800 hover:bg-slate-900/60 transition text-slate-400 hover:text-slate-100 flex items-center justify-center shrink-0 ${className}`}
+      className={`p-2.5 rounded-xl border border-[#2A2A2B] hover:bg-[#1C1B1C] transition text-[#919095] hover:text-[#E5E2E3] flex items-center justify-center shrink-0 cursor-pointer ${className}`}
       title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
       aria-label="Toggle theme"
     >
-      {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+      {theme === 'dark' ? <Sun className="w-5 h-5 text-[#FFAB00]" /> : <Moon className="w-5 h-5 text-[#00F1FE]" />}
     </button>
   );
 }

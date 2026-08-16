@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { DarkTheme, DefaultTheme, ThemeProvider as ExpoThemeProvider } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemeProvider, useColorScheme } from '@/hooks/use-color-scheme';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
@@ -85,22 +86,25 @@ function TabLayoutContent() {
         <AppTabs />
       ) : (
         /* Unauthenticated: Render Login/Register Screen Gate */
-        <SafeAreaView style={[styles.loginWrapper, { backgroundColor: theme.background }]}>
+        <SafeAreaView style={[styles.loginWrapper, { backgroundColor: '#131314' }]}>
           <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={{ flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' }}
           >
             <ScrollView contentContainerStyle={styles.scrollContainer} style={{ width: '100%' }}>
-              <View style={[styles.loginCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+              <View style={[styles.loginCard, { backgroundColor: '#1C1B1C', borderColor: '#2A2A2B' }]}>
                 {/* Logo / Title */}
                 <View style={styles.logoRow}>
                   <View style={styles.heartIcon}>
                     <Text style={styles.heartText}>♥</Text>
                   </View>
-                  <Text style={[styles.brandTitle, { color: theme.text }]}>BloodHero</Text>
+                  <View>
+                    <Text style={styles.brandTitle}>BloodHero</Text>
+                    <Text style={styles.hudSubtext}>v2.4</Text>
+                  </View>
                 </View>
-                <Text style={[styles.tagline, { color: theme.textSecondary }]}>
-                  {isRegisterMode ? 'Join the emergency donor network' : 'Sign in to coordinate donations'}
+                <Text style={styles.tagline}>
+                  {isRegisterMode ? 'REGISTER DONOR PROFILE' : 'AUTHENTICATE SESSION'}
                 </Text>
 
                 {authError ? (
@@ -111,11 +115,11 @@ function TabLayoutContent() {
 
                 {/* Form fields */}
                 <View style={styles.formContainer}>
-                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Username</Text>
+                  <Text style={styles.fieldLabel}>USERNAME</Text>
                   <TextInput
-                    style={[styles.input, { color: theme.text, backgroundColor: theme.background, borderColor: theme.backgroundSelected }]}
+                    style={styles.input}
                     placeholder="Enter username"
-                    placeholderTextColor={theme.textSecondary}
+                    placeholderTextColor="#919095"
                     value={username}
                     onChangeText={setUsername}
                     autoCapitalize="none"
@@ -123,11 +127,11 @@ function TabLayoutContent() {
 
                   {isRegisterMode && (
                     <>
-                      <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Email Address</Text>
+                      <Text style={styles.fieldLabel}>EMAIL ADDRESS</Text>
                       <TextInput
-                        style={[styles.input, { color: theme.text, backgroundColor: theme.background, borderColor: theme.backgroundSelected }]}
+                        style={styles.input}
                         placeholder="email@example.com"
-                        placeholderTextColor={theme.textSecondary}
+                        placeholderTextColor="#919095"
                         value={email}
                         onChangeText={setEmail}
                         autoCapitalize="none"
@@ -136,11 +140,11 @@ function TabLayoutContent() {
                     </>
                   )}
 
-                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Password</Text>
+                  <Text style={styles.fieldLabel}>PASSWORD</Text>
                   <TextInput
-                    style={[styles.input, { color: theme.text, backgroundColor: theme.background, borderColor: theme.backgroundSelected }]}
+                    style={styles.input}
                     placeholder="••••••••"
-                    placeholderTextColor={theme.textSecondary}
+                    placeholderTextColor="#919095"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
@@ -149,26 +153,26 @@ function TabLayoutContent() {
 
                   {isRegisterMode && (
                     <>
-                      <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Phone Number</Text>
+                      <Text style={styles.fieldLabel}>PHONE NUMBER</Text>
                       <TextInput
-                        style={[styles.input, { color: theme.text, backgroundColor: theme.background, borderColor: theme.backgroundSelected }]}
+                        style={styles.input}
                         placeholder="+254712345678"
-                        placeholderTextColor={theme.textSecondary}
+                        placeholderTextColor="#919095"
                         value={phone}
                         onChangeText={setPhone}
                         keyboardType="phone-pad"
                       />
 
-                      <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>City</Text>
+                      <Text style={styles.fieldLabel}>CITY / REGION</Text>
                       <TextInput
-                        style={[styles.input, { color: theme.text, backgroundColor: theme.background, borderColor: theme.backgroundSelected }]}
+                        style={styles.input}
                         placeholder="Nairobi"
-                        placeholderTextColor={theme.textSecondary}
+                        placeholderTextColor="#919095"
                         value={city}
                         onChangeText={setCity}
                       />
 
-                      <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Blood Type</Text>
+                      <Text style={styles.fieldLabel}>BLOOD GROUP</Text>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bloodSelector}>
                         {bloodTypes.map(type => {
                           const isSelected = bloodType === type;
@@ -178,12 +182,12 @@ function TabLayoutContent() {
                               style={[
                                 styles.bloodBubble,
                                 isSelected 
-                                  ? { backgroundColor: '#dc2626', borderColor: '#dc2626' } 
-                                  : { backgroundColor: theme.background, borderColor: theme.backgroundSelected }
+                                  ? { backgroundColor: '#FF0033', borderColor: '#FF5357' } 
+                                  : { backgroundColor: '#0E0E0F', borderColor: '#2A2A2B' }
                               ]}
                               onPress={() => setBloodType(type)}
                             >
-                              <Text style={[styles.bloodBubbleText, { color: isSelected ? '#ffffff' : theme.text }]}>
+                              <Text style={[styles.bloodBubbleText, { color: isSelected ? '#ffffff' : '#E5E2E3' }]}>
                                 {type}
                               </Text>
                             </TouchableOpacity>
@@ -203,7 +207,7 @@ function TabLayoutContent() {
                       <ActivityIndicator color="#ffffff" />
                     ) : (
                       <Text style={styles.submitBtnText}>
-                        {isRegisterMode ? 'Create Account' : 'Sign In'}
+                        {isRegisterMode ? 'REGISTER ACCOUNT' : 'SIGN IN'}
                       </Text>
                     )}
                   </TouchableOpacity>
@@ -216,10 +220,10 @@ function TabLayoutContent() {
                       setAuthError('');
                     }}
                   >
-                    <Text style={{ color: '#ef4444', fontSize: 13, fontWeight: '600', textAlign: 'center' }}>
+                    <Text style={{ color: '#FF5357', fontSize: 12, fontWeight: '700', textAlign: 'center' }}>
                       {isRegisterMode 
-                        ? 'Already have an account? Sign In' 
-                        : "Don't have an account? Sign Up"}
+                        ? 'ALREADY REGISTERED? SIGN IN' 
+                        : "NEW TO BLOODHERO? REGISTER DONOR ACCOUNT"}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -231,8 +235,6 @@ function TabLayoutContent() {
     </ExpoThemeProvider>
   );
 }
-
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   return (
@@ -261,6 +263,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: Spacing.four,
     gap: Spacing.three,
+    shadowColor: '#FF0033',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    elevation: 8,
   },
   logoRow: {
     flexDirection: 'row',
@@ -269,37 +276,53 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heartIcon: {
-    backgroundColor: '#dc2626',
-    borderRadius: 8,
-    width: 32,
-    height: 32,
+    backgroundColor: '#FF0033',
+    borderRadius: 12,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#FF0033',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    elevation: 6,
   },
   heartText: {
     color: '#ffffff',
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
   },
   brandTitle: {
     fontSize: 22,
+    fontWeight: '900',
+    color: '#E5E2E3',
+    letterSpacing: -0.5,
+  },
+  hudSubtext: {
+    fontSize: 9,
     fontWeight: 'bold',
+    color: '#00F1FE',
+    letterSpacing: 1.5,
   },
   tagline: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#919095',
     textAlign: 'center',
-    marginBottom: Spacing.two,
+    marginBottom: Spacing.one,
+    letterSpacing: 1,
   },
   errorBox: {
-    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+    backgroundColor: 'rgba(255, 0, 51, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(220, 38, 38, 0.25)',
+    borderColor: 'rgba(255, 0, 51, 0.4)',
     borderRadius: 12,
     padding: Spacing.two,
   },
   errorText: {
-    color: '#ef4444',
-    fontSize: 12,
+    color: '#FF5357',
+    fontSize: 11,
     fontWeight: 'bold',
     textAlign: 'center',
   },
@@ -307,15 +330,21 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   fieldLabel: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#919095',
+    letterSpacing: 0.5,
   },
   input: {
     borderRadius: 12,
     borderWidth: 1,
+    backgroundColor: '#0E0E0F',
+    borderColor: '#2A2A2B',
+    color: '#E5E2E3',
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
     fontSize: 13,
+    fontWeight: '600',
   },
   bloodSelector: {
     flexDirection: 'row',
@@ -335,17 +364,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   submitBtn: {
-    backgroundColor: '#dc2626',
+    backgroundColor: '#FF0033',
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: Spacing.two,
+    shadowColor: '#FF0033',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
   },
   submitBtnText: {
     color: '#ffffff',
-    fontWeight: 'bold',
-    fontSize: 14,
+    fontWeight: '900',
+    fontSize: 13,
+    letterSpacing: 0.5,
   },
   toggleBtn: {
     marginTop: Spacing.one,

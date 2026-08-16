@@ -1,99 +1,140 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { StyleSheet, ScrollView, View, Text, TouchableOpacity, Linking, RefreshControl, ActivityIndicator, Modal } from 'react-native';
+import { StyleSheet, ScrollView, View, Text, TextInput, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemeContext } from '@/context/theme-context';
-import { mobileApi, BloodRequest } from '@/utils/api';
-
-// Fallback Mock Data in case backend is unreachable on localhost from simulator/emulator
-const MOCK_ALERTS: BloodRequest[] = [
-  {
-    id: 1,
-    first_name: 'Timothy',
-    last_name: 'Kariuki',
-    blood_type: 'O-',
-    contact_number: '+254712345678',
-    location: 'Nairobi National Hospital',
-    is_emergency: true,
-    created_at: new Date().toISOString(),
-    expires_at: new Date().toISOString(),
-  },
-  {
-    id: 2,
-    first_name: 'Esther',
-    last_name: 'Wanjiku',
-    blood_type: 'AB+',
-    contact_number: '+254789101112',
-    location: 'Aga Khan Medical Center',
-    is_emergency: true,
-    created_at: new Date().toISOString(),
-    expires_at: new Date().toISOString(),
-  },
-  {
-    id: 3,
-    first_name: 'Michael',
-    last_name: 'Otieno',
-    blood_type: 'A+',
-    contact_number: '+254755566677',
-    location: 'Mombasa Coast Hospital',
-    is_emergency: false,
-    created_at: new Date().toISOString(),
-    expires_at: new Date().toISOString(),
-  }
-];
+import { mobileApi, getCurrentUser, addAuthListener } from '@/utils/api';
 
 export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { colorScheme, toggleColorScheme } = useContext(ThemeContext);
-  const [requests, setRequests] = useState<BloodRequest[]>(MOCK_ALERTS);
+
+  const [currentUser, setCurrentUser] = useState<any>(getCurrentUser());
+
+  // Refresh and Loading
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Modal State
-  const [selectedRequest, setSelectedRequest] = useState<BloodRequest | null>(null);
+  // Dashboard States
+  const [donations, setDonations] = useState<any[]>([]);
+  const [rewards, setRewards] = useState<any>(null);
 
-  const fetchRequests = async () => {
-    setLoading(true);
-    try {
-      const data = await mobileApi.requests.list();
-      if (data && data.length > 0) {
-        setRequests(data);
+  // Log Donation Form States
+  const [showLogForm, setShowLogForm] = useState(false);
+  const [logFormData, setLogFormData] = useState({
+    date: '',
+    location: '',
+    blood_type: 'A+',
+    quantity_ml: 450,
+    notes: '',
+  });
+  const [logSuccess, setLogSuccess] = useState('');
+  const [logError, setLogError] = useState('');
+  const [logSubmitting, setLogSubmitting] = useState(false);
+
+  const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+  // Subscribe to auth state changes
+  useEffect(() => {
+    const unsubscribe = addAuthListener((token, user) => {
+      setCurrentUser(user);
+      if (user) {
+        setLogFormData(prev => ({
+          ...prev,
+          blood_type: user.profile?.blood_type || 'A+',
+        }));
       }
+    });
+    fetchDashboardData();
+    return unsubscribe;
+  }, []);
+
+  // Fetch Dashboard (Donations & Rewards)
+  const fetchDashboardData = async () => {
+    try {
+      const donationList = await mobileApi.donations.list();
+      setDonations(donationList || []);
+      const rewardStats = await mobileApi.rewards.get();
+      setRewards(rewardStats);
     } catch (err) {
-      console.log('Using local mock data fallback. Backend request failed:', err);
+      console.log('Backend dashboard data failed:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    fetchRequests();
-  }, []);
-
   const onRefresh = () => {
     setRefreshing(true);
-    fetchRequests();
+    fetchDashboardData();
   };
 
-  const handleRespond = (phone: string, name: string) => {
-    const cleanPhone = phone.replace(/[^\d+]/g, '');
-    const message = `Hello ${name}, I saw your blood request on the BloodHero app and would like to help.`;
-    const url = `https://wa.me/${cleanPhone.replace('+', '')}?text=${encodeURIComponent(message)}`;
-    
-    Linking.canOpenURL(url)
-      .then((supported) => {
-        if (supported) {
-          return Linking.openURL(url);
-        } else {
-          return Linking.openURL(`tel:${cleanPhone}`);
-        }
-      })
-      .catch((err) => console.error('An error occurred opening WhatsApp link', err));
+  // Submit Log Donation
+  const handleLogSubmit = async () => {
+    setLogError('');
+    setLogSuccess('');
+
+    if (!logFormData.date.trim()) {
+      setLogError('Date of donation is required.');
+      return;
+    }
+    if (!logFormData.location.trim()) {
+      setLogError('Location/Center is required.');
+      return;
+    }
+
+    setLogSubmitting(true);
+    try {
+      await mobileApi.donations.log({
+        date: new Date(logFormData.date).toISOString(),
+        location: logFormData.location.trim(),
+        blood_type: logFormData.blood_type,
+        quantity_ml: Number(logFormData.quantity_ml) || 450,
+        notes: logFormData.notes.trim(),
+      });
+
+      setLogSuccess('Blood donation logged! XP points added to your balance.');
+      setShowLogForm(false);
+      setLogFormData({
+        date: '',
+        location: '',
+        blood_type: currentUser?.profile?.blood_type || 'A+',
+        quantity_ml: 450,
+        notes: '',
+      });
+      fetchDashboardData();
+    } catch (err: any) {
+      setLogError(err.message || 'Failed to log donation.');
+    } finally {
+      setLogSubmitting(false);
+    }
   };
+
+  // Calculate 56-day whole blood cooldown eligibility
+  const getCooldownEligibility = () => {
+    if (!donations || donations.length === 0) {
+      return { eligible: true, message: 'You have no recorded donations. You are fully eligible to donate whole blood!' };
+    }
+
+    const sorted = [...donations].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const lastDonationDate = new Date(sorted[0].date);
+    const diffDays = Math.ceil(Math.abs(new Date().getTime() - lastDonationDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 56) {
+      const remaining = 56 - diffDays;
+      return {
+        eligible: false,
+        message: `Cooling Period Active: You donated ${diffDays} days ago. Please wait another ${remaining} days before your next donation.`
+      };
+    }
+
+    return { eligible: true, message: 'Your red blood cells have fully recovered! You are eligible to donate whole blood.' };
+  };
+
+  const cooling = getCooldownEligibility();
 
   return (
     <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
@@ -101,216 +142,181 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: theme.backgroundSelected }]}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View style={styles.brandContainer}>
-              <View style={styles.heartIcon}>
-                <Text style={styles.heartText}>♥</Text>
-              </View>
-              <Text style={[styles.brandTitle, { color: theme.text }]}>BloodHero</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={[styles.statusDot, { backgroundColor: theme.bioGreen }]} />
+              <Text style={[styles.headerTitle, { color: theme.text }]}>Donor Console</Text>
             </View>
-            <TouchableOpacity
-              onPress={toggleColorScheme}
-              style={{
-                padding: Spacing.two,
-                borderRadius: 10,
-                backgroundColor: theme.backgroundElement,
-                borderWidth: 1,
-                borderColor: theme.backgroundSelected,
-                justifyContent: 'center',
-                alignItems: 'center'
-              }}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity onPress={toggleColorScheme} style={[styles.themeToggleBtn, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
               <Text style={{ fontSize: 16 }}>{colorScheme === 'dark' ? '☀️' : '🌙'}</Text>
             </TouchableOpacity>
           </View>
-          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Active SOS Alerts Feed</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.secondary }]}>MONITOR POINTS, LOG HISTORY & BIOLOGICAL ELIGIBILITY</Text>
         </View>
 
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#dc2626" />
-          }
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
         >
-          {loading && !refreshing ? (
-            <ActivityIndicator size="large" color="#dc2626" style={styles.loader} />
-          ) : (
-            <View style={styles.cardsContainer}>
-              {requests.map((req) => (
-                <View
-                  key={req.id}
-                  style={[
-                    styles.card,
-                    req.is_emergency ? styles.emergencyCard : [styles.regularCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]
-                  ]}
-                >
-                  <View style={styles.cardHeader}>
-                    <View>
-                      <View style={styles.nameRow}>
-                        <Text style={[styles.cardName, { color: theme.text }]}>
-                          {req.first_name} {req.last_name}
-                        </Text>
-                        {req.is_emergency && (
-                          <View style={styles.sosBadge}>
-                            <Text style={styles.sosText}>SOS</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={[styles.cardLocation, { color: theme.textSecondary }]}>📍 {req.location}</Text>
-                    </View>
-                    
-                    <View style={styles.bloodCircle}>
-                      <Text style={styles.bloodText}>{req.blood_type}</Text>
-                    </View>
-                  </View>
+          {/* Action Header Section */}
+          <View style={[styles.actionBanner, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[styles.actionTitle, { color: theme.text }]}>Donor Console Matrix</Text>
+              <Text style={[styles.actionSub, { color: theme.textSecondary }]}>Log finished intake or check biological cooling status</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.logBtn, { backgroundColor: theme.primaryNeon }]}
+              onPress={() => setShowLogForm(!showLogForm)}
+            >
+              <Text style={styles.logBtnText}>+ Log Donation</Text>
+            </TouchableOpacity>
+          </View>
 
-                  <View style={[styles.cardFooter, { borderTopColor: theme.backgroundSelected }]}>
-                    <Text style={[styles.phoneText, { color: theme.textSecondary }]}>📞 {req.contact_number}</Text>
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
+          {/* Log Donation Collapsible Form */}
+          {showLogForm && (
+            <View style={[styles.formCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+              <Text style={[styles.formTitle, { color: theme.text }]}>🩸 Log Completed Donation</Text>
+
+              {logError ? <Text style={styles.errorText}>⚠ {logError}</Text> : null}
+
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>DATE OF DONATION (YYYY-MM-DD)</Text>
+                <TextInput
+                  style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundDim, borderColor: theme.backgroundSelected }]}
+                  placeholder="2026-08-16"
+                  placeholderTextColor={theme.textSecondary}
+                  value={logFormData.date}
+                  onChangeText={(val) => setLogFormData(prev => ({ ...prev, date: val }))}
+                />
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>LOCATION (CLINIC/HOSPITAL)</Text>
+                <TextInput
+                  style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundDim, borderColor: theme.backgroundSelected }]}
+                  placeholder="Nairobi Blood Center"
+                  placeholderTextColor={theme.textSecondary}
+                  value={logFormData.location}
+                  onChangeText={(val) => setLogFormData(prev => ({ ...prev, location: val }))}
+                />
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>BLOOD GROUP</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bloodSelector}>
+                  {bloodTypes.map(type => {
+                    const isSelected = logFormData.blood_type === type;
+                    return (
                       <TouchableOpacity
-                        style={[styles.detailsButton, { backgroundColor: theme.backgroundSelected }]}
-                        onPress={() => setSelectedRequest(req)}
+                        key={type}
+                        style={[
+                          styles.bloodBubble, 
+                          isSelected 
+                            ? { backgroundColor: theme.primaryNeon, borderColor: theme.primary } 
+                            : { backgroundColor: theme.backgroundDim, borderColor: theme.backgroundSelected }
+                        ]}
+                        onPress={() => setLogFormData(prev => ({ ...prev, blood_type: type }))}
                       >
-                        <Text style={[styles.detailsButtonText, { color: theme.text }]}>Details</Text>
+                        <Text style={[styles.bloodBubbleText, { color: isSelected ? '#ffffff' : theme.text }]}>
+                          {type}
+                        </Text>
                       </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.respondButton}
-                        onPress={() => handleRespond(req.contact_number, req.first_name)}
-                      >
-                        <Text style={styles.respondButtonText}>Respond</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-              ))}
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>QUANTITY (ML)</Text>
+                <TextInput
+                  style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundDim, borderColor: theme.backgroundSelected }]}
+                  placeholder="450"
+                  placeholderTextColor={theme.textSecondary}
+                  keyboardType="numeric"
+                  value={String(logFormData.quantity_ml)}
+                  onChangeText={(val) => setLogFormData(prev => ({ ...prev, quantity_ml: Number(val) || 450 }))}
+                />
+              </View>
+
+              <TouchableOpacity style={[styles.submitBtn, { backgroundColor: theme.primaryNeon }]} onPress={handleLogSubmit} disabled={logSubmitting}>
+                {logSubmitting ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <Text style={styles.submitBtnText}>SAVE DONATION LOG</Text>
+                )}
+              </TouchableOpacity>
             </View>
           )}
 
-          {/* Compatibility Tips */}
-          <View style={[styles.tipsSection, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
-            <Text style={[styles.tipsTitle, { color: theme.text }]}>Compatibility Guide</Text>
-            <Text style={[styles.tipText, { color: theme.textSecondary }]}>• O- is the Universal Donor: Can donate to any blood type.</Text>
-            <Text style={[styles.tipText, { color: theme.textSecondary }]}>• AB+ is the Universal Recipient: Can receive from any blood type.</Text>
-            <Text style={[styles.tipText, { color: theme.textSecondary }]}>• Always wait 56 days between consecutive whole blood donations.</Text>
+          {logSuccess ? (
+            <View style={styles.successBox}>
+              <Text style={styles.successText}>✓ {logSuccess}</Text>
+            </View>
+          ) : null}
+
+          {/* Metrics Grid */}
+          <View style={styles.metricsGrid}>
+            <View style={[styles.metricCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+              <Text style={[styles.metricVal, { color: theme.text }]}>{rewards?.total_points || 0}</Text>
+              <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Total XP</Text>
+            </View>
+            <View style={[styles.metricCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+              <Text style={[styles.metricVal, { color: theme.primary }]}>{rewards?.current_badge || 'Bronze'}</Text>
+              <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Reward Tier</Text>
+            </View>
+            <View style={[styles.metricCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+              <Text style={[styles.metricVal, { color: theme.secondary }]}>{donations.length}</Text>
+              <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>Donations</Text>
+            </View>
+          </View>
+
+          {/* Cooldown Eligibility Alert Banner */}
+          <View style={[
+            styles.cooldownCard, 
+            { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected },
+            cooling.eligible ? { borderColor: 'rgba(0, 255, 148, 0.4)' } : { borderColor: 'rgba(255, 0, 51, 0.4)' }
+          ]}>
+            <Text style={[styles.cooldownTitle, cooling.eligible ? { color: theme.bioGreen } : { color: theme.primary }]}>
+              {cooling.eligible ? 'Ready to Donate' : 'Waiting Cooldown Period'}
+            </Text>
+            <Text style={[styles.cooldownBody, { color: theme.textSecondary }]}>{cooling.message}</Text>
+          </View>
+
+          {/* Donation History List */}
+          <View style={{ gap: 10 }}>
+            <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>DONATION HISTORY LOGS</Text>
+
+            {loading ? (
+              <ActivityIndicator color={theme.primary} style={{ marginVertical: 20 }} />
+            ) : donations.length === 0 ? (
+              <View style={[styles.emptyCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                <Text style={[styles.emptyTitle, { color: theme.text }]}>No Donations Logged Yet</Text>
+                <Text style={[styles.emptySub, { color: theme.textSecondary }]}>Log your finished donation above to earn XP rewards!</Text>
+              </View>
+            ) : (
+              <View style={{ gap: 10 }}>
+                {donations.map((d) => (
+                  <View key={d.id} style={[styles.logCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                    <View style={styles.logLeft}>
+                      <View style={[styles.bloodTypePill, { backgroundColor: 'rgba(255, 0, 51, 0.15)', borderColor: 'rgba(255, 0, 51, 0.3)' }]}>
+                        <Text style={[styles.bloodTypePillText, { color: theme.primary }]}>{d.blood_type}</Text>
+                      </View>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={[styles.logLocation, { color: theme.text }]}>📍 {d.location}</Text>
+                        <Text style={[styles.logDate, { color: theme.textSecondary }]}>📅 {new Date(d.date).toLocaleDateString()}</Text>
+                      </View>
+                    </View>
+                    <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                      <Text style={[styles.logQuantity, { color: theme.textSecondary }]}>{d.quantity_ml} ml</Text>
+                      <Text style={[styles.logXp, { color: theme.bioGreen }]}>+{d.points_earned} XP</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         </ScrollView>
       </SafeAreaView>
-
-      {/* Detailed View Modal */}
-      {selectedRequest && (
-        <Modal
-          visible={selectedRequest !== null}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setSelectedRequest(null)}
-        >
-          <TouchableOpacity 
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setSelectedRequest(null)}
-          >
-            <View 
-              style={[styles.modalCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}
-              onStartShouldSetResponder={() => true}
-            >
-              {/* Header */}
-              <View style={styles.modalHeader}>
-                <View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={[styles.modalTitle, { color: theme.text }]}>
-                      {selectedRequest.first_name} {selectedRequest.last_name}
-                    </Text>
-                    {selectedRequest.is_emergency && (
-                      <View style={styles.sosBadge}>
-                        <Text style={styles.sosText}>SOS</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>Active Emergency Broadcast</Text>
-                </View>
-                <TouchableOpacity onPress={() => setSelectedRequest(null)} style={styles.closeButton}>
-                  <Text style={{ color: theme.text, fontSize: 18, fontWeight: 'bold' }}>✕</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Blood Type Info */}
-              <View style={styles.modalBloodSection}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.modalSectionLabel, { color: theme.textSecondary }]}>REQUIRED BLOOD TYPE</Text>
-                  <Text style={[styles.modalSectionDesc, { color: theme.textSecondary }]}>Compatible donors, please respond</Text>
-                </View>
-                <View style={styles.modalBloodCircle}>
-                  <Text style={styles.modalBloodCircleText}>{selectedRequest.blood_type}</Text>
-                </View>
-              </View>
-
-              {/* Location & Coordinates */}
-              <View style={[styles.modalInfoBox, { backgroundColor: theme.background, borderColor: theme.backgroundSelected }]}>
-                <Text style={[styles.modalSectionLabel, { color: theme.textSecondary }]}>LOCATION & DIRECTIONS</Text>
-                <Text style={[styles.modalInfoVal, { color: theme.text, marginTop: 4 }]}>📍 {selectedRequest.location}</Text>
-                
-                {selectedRequest.latitude && selectedRequest.longitude ? (
-                  <View style={{ marginTop: 8 }}>
-                    <Text style={{ color: theme.textSecondary, fontSize: 11 }}>
-                      GPS: {selectedRequest.latitude.toFixed(6)}, {selectedRequest.longitude.toFixed(6)}
-                    </Text>
-                    <TouchableOpacity
-                      style={[styles.mapsButton, { backgroundColor: theme.backgroundSelected }]}
-                      onPress={() => {
-                        const url = `https://www.google.com/maps/search/?api=1&query=${selectedRequest.latitude},${selectedRequest.longitude}`;
-                        Linking.openURL(url);
-                      }}
-                    >
-                      <Text style={[styles.mapsButtonText, { color: theme.text }]}>🗺 View on Google Maps</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <Text style={{ color: theme.textSecondary, fontSize: 11, fontStyle: 'italic', marginTop: 6 }}>
-                    No GPS coordinates logged for this alert.
-                  </Text>
-                )}
-              </View>
-
-              {/* Contact Details */}
-              <View style={[styles.modalInfoBox, { backgroundColor: theme.background, borderColor: theme.backgroundSelected }]}>
-                <Text style={[styles.modalSectionLabel, { color: theme.textSecondary }]}>CONTACT NUMBER</Text>
-                <Text style={[styles.modalInfoVal, { color: theme.text, marginTop: 4 }]}>📞 {selectedRequest.contact_number}</Text>
-              </View>
-
-              {/* Actions */}
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={[styles.chatButton, { backgroundColor: theme.backgroundSelected }]}
-                  onPress={() => {
-                    if (!selectedRequest.requester_id) {
-                      alert('This request was submitted as a guest and does not support in-app chat.');
-                      return;
-                    }
-                    
-                    const reqId = selectedRequest.requester_id;
-                    setSelectedRequest(null);
-                    
-                    // Navigate to chat tab passing other_id
-                    router.push(`/chat?other_id=${reqId}`);
-                  }}
-                >
-                  <Text style={[styles.chatButtonText, { color: theme.text }]}>💬 Chat In-App</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.modalRespondButton}
-                  onPress={() => {
-                    handleRespond(selectedRequest.contact_number, selectedRequest.first_name);
-                  }}
-                >
-                  <Text style={styles.modalRespondButtonText}>WhatsApp</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </Modal>
-      )}
     </View>
   );
 }
@@ -329,282 +335,219 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
   },
-  brandContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
-  heartIcon: {
-    backgroundColor: '#dc2626',
-    borderRadius: 8,
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '900',
   },
-  heartText: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  brandTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff',
+  themeToggleBtn: {
+    padding: 8,
+    borderRadius: 10,
+    borderWidth: 1,
   },
   headerSubtitle: {
-    fontSize: 12,
-    color: '#94a3b8',
+    fontSize: 9,
+    fontWeight: 'bold',
     marginTop: 4,
-    fontWeight: '600',
+    letterSpacing: 1.2,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: BottomTabInset + Spacing.six,
+    paddingBottom: BottomTabInset + 60,
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.four,
+    gap: 16,
   },
-  loader: {
-    marginVertical: 40,
-  },
-  cardsContainer: {
-    gap: Spacing.four,
-  },
-  card: {
-    borderWidth: 1,
+  actionBanner: {
     borderRadius: 20,
-    padding: Spacing.four,
-    gap: Spacing.four,
-  },
-  emergencyCard: {
-    backgroundColor: 'rgba(220, 38, 38, 0.05)',
-    borderColor: 'rgba(220, 38, 38, 0.25)',
-  },
-  regularCard: {
-    backgroundColor: '#0f172a',
-    borderColor: '#1e293b',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  nameRow: {
+    padding: 16,
+    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.two,
   },
-  cardName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  sosBadge: {
-    backgroundColor: '#dc2626',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  sosText: {
-    color: '#ffffff',
-    fontSize: 9,
-    fontWeight: '900',
-  },
-  cardLocation: {
-    fontSize: 12,
-    color: '#94a3b8',
-    marginTop: 4,
-  },
-  bloodCircle: {
-    backgroundColor: 'rgba(220, 38, 38, 0.1)',
-    borderColor: 'rgba(220, 38, 38, 0.25)',
-    borderWidth: 1,
-    borderRadius: 12,
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bloodText: {
-    color: '#ef4444',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
-    paddingTop: Spacing.three,
-  },
-  phoneText: {
-    fontSize: 13,
-    color: '#94a3b8',
-  },
-  detailsButton: {
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 10,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  detailsButtonText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  respondButton: {
-    backgroundColor: 'rgba(220, 38, 38, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(220, 38, 38, 0.2)',
-    borderRadius: 10,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  respondButtonText: {
-    color: '#ef4444',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  tipsSection: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    borderRadius: 20,
-    padding: Spacing.four,
-    marginTop: Spacing.six,
-    gap: Spacing.two,
-  },
-  tipsTitle: {
+  actionTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 4,
   },
-  tipText: {
-    fontSize: 12,
-    color: '#94a3b8',
-    lineHeight: 18,
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.four,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 500,
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: Spacing.four,
-    gap: Spacing.four,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
-    paddingBottom: Spacing.three,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  modalSubtitle: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  closeButton: {
-    padding: 8,
-  },
-  modalBloodSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(220, 38, 38, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(220, 38, 38, 0.15)',
-    borderRadius: 16,
-    padding: Spacing.three,
-  },
-  modalSectionLabel: {
+  actionSub: {
     fontSize: 10,
+  },
+  logBtn: {
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  logBtnText: {
+    color: '#ffffff',
     fontWeight: '900',
-    letterSpacing: 1.5,
-  },
-  modalSectionDesc: {
     fontSize: 11,
-    marginTop: 2,
   },
-  modalBloodCircle: {
-    backgroundColor: '#dc2626',
-    borderRadius: 16,
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalBloodCircleText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-  modalInfoBox: {
+  formCard: {
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 1,
-    borderRadius: 16,
-    padding: Spacing.three,
+    gap: 12,
   },
-  modalInfoVal: {
-    fontSize: 13,
+  formTitle: {
+    fontSize: 14,
     fontWeight: 'bold',
   },
-  mapsButton: {
-    borderRadius: 8,
-    padding: 8,
-    marginTop: 8,
-    alignSelf: 'flex-start',
-  },
-  mapsButtonText: {
+  errorText: {
+    color: '#FF5357',
     fontSize: 11,
     fontWeight: 'bold',
   },
-  modalActions: {
+  fieldGroup: {
+    gap: 4,
+  },
+  fieldLabel: {
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
+  input: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 13,
+  },
+  bloodSelector: {
     flexDirection: 'row',
-    gap: Spacing.three,
-    marginTop: Spacing.two,
+    marginTop: 4,
   },
-  chatButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+  bloodBubble: {
+    width: 44,
+    height: 44,
     borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
+    borderWidth: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
   },
-  chatButtonText: {
+  bloodBubbleText: {
     fontSize: 13,
     fontWeight: 'bold',
   },
-  modalRespondButton: {
-    flex: 1,
-    backgroundColor: '#dc2626',
-    borderRadius: 12,
-    paddingVertical: 12,
+  submitBtn: {
+    borderRadius: 14,
+    paddingVertical: 14,
     alignItems: 'center',
-    justifyContent: 'center',
+    marginTop: 4,
   },
-  modalRespondButtonText: {
+  submitBtnText: {
     color: '#ffffff',
+    fontWeight: '900',
+    fontSize: 12,
+  },
+  successBox: {
+    backgroundColor: 'rgba(0, 255, 148, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 255, 148, 0.3)',
+    borderRadius: 14,
+    padding: 12,
+  },
+  successText: {
+    color: '#00FF94',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  metricCard: {
+    flex: 1,
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  metricVal: {
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  metricLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  cooldownCard: {
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    gap: 6,
+  },
+  cooldownTitle: {
     fontSize: 13,
+    fontWeight: 'bold',
+  },
+  cooldownBody: {
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  emptyCard: {
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  emptySub: {
+    fontSize: 11,
+    marginTop: 4,
+  },
+  logCard: {
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  logLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
+  },
+  bloodTypePill: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  bloodTypePillText: {
+    fontWeight: '900',
+    fontSize: 13,
+  },
+  logLocation: {
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  logDate: {
+    fontSize: 10,
+  },
+  logQuantity: {
+    fontSize: 11,
+  },
+  logXp: {
+    fontSize: 12,
     fontWeight: 'bold',
   },
 });

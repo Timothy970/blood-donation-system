@@ -98,6 +98,19 @@ export interface Booking {
   status: string;
 }
 
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  role?: string;
+  profile?: {
+    blood_type?: string;
+    phone_number?: string;
+    city?: string;
+    availability?: string;
+  };
+}
+
 export interface RewardStatus {
   total_points: number;
   current_badge: 'None' | 'Bronze' | 'Silver' | 'Gold' | 'Platinum';
@@ -193,13 +206,28 @@ export const mobileApi = {
   },
   requests: {
     list: () => request<BloodRequest[]>('/requests'),
+    create: (payload: any) => request<{ request: BloodRequest; matching_donors: any[]; message: string }>('/requests', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   },
   bookings: {
     list: () => request<Booking[]>('/bookings'),
     create: (payload: any) => request<Booking>('/bookings', { method: 'POST', body: JSON.stringify(payload) }),
+    delete: (id: number) => request<{ message: string }>(`/bookings/${id}`, { method: 'DELETE' }),
+  },
+  donations: {
+    list: () => request<any[]>('/donations'),
+    log: (payload: any) => request<{ message: string; donation: any }>('/donations', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   },
   rewards: {
     get: () => request<RewardStatus>('/rewards'),
+  },
+  users: {
+    list: () => request<User[]>('/users'),
   },
   chats: {
     list: () => request<ChatRow[]>('/chats'),
@@ -209,6 +237,8 @@ export const mobileApi = {
   },
   admin: {
     getStats: () => request<AdminStats>('/admin/stats'),
+    listUsers: () => request<any[]>('/admin/users'),
+    deleteUser: (id: number) => request<{ message: string }>(`/admin/users/${id}`, { method: 'DELETE' }),
     listBookings: () => request<Booking[]>('/admin/bookings'),
     updateBooking: (id: number, status: string) => request<Booking>(`/admin/bookings/${id}`, {
       method: 'PUT',

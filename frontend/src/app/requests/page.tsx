@@ -117,15 +117,18 @@ export default function RequestsPage() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-slate-950 text-slate-100">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#F8F9FA] dark:bg-[#131314] text-[#1A1A1A] dark:text-[#E5E2E3]">
       <Navigation />
 
       <main className="flex-1 p-6 lg:p-10 max-w-7xl mx-auto w-full flex flex-col gap-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 bg-[#1C1B1C]/60 p-6 rounded-3xl border border-white/10 backdrop-blur-xl shadow-2xl">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">SOS & Emergency Alerts</h1>
-            <p className="text-sm text-slate-400 mt-1">Broadcast urgent requests and view real-time blood needs</p>
+            <div className="flex items-center gap-3">
+              <span className="w-3 h-3 rounded-full bg-[#FF0033] pulse-active shadow-[0_0_12px_rgba(255,0,51,0.8)]" />
+              <h1 className="font-headline text-2xl lg:text-3xl font-extrabold text-[#E5E2E3] tracking-tight">SOS Emergency Network</h1>
+            </div>
+            <p className="text-xs font-mono-hud text-[#00F1FE] mt-1.5 tracking-wider uppercase">REAL-TIME PROXIMITY & BIOLOGICAL COMPATIBILITY MATCHING</p>
           </div>
 
           <button
@@ -133,10 +136,10 @@ export default function RequestsPage() {
               setShowForm(!showForm);
               setMatchedDonors([]);
             }}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold px-5 py-3 rounded-2xl shadow-lg shadow-red-950/20 transition hover:scale-[1.03] active:scale-[0.98] transform duration-150"
+            className="flex items-center justify-center gap-2.5 bg-gradient-to-r from-[#FF0033] to-[#FF5357] hover:from-[#FF0033] hover:to-[#FF5357] text-white font-headline font-bold text-sm px-6 py-3.5 rounded-2xl shadow-[0_0_25px_rgba(255,0,51,0.35)] transition-all hover:scale-[1.02] active:scale-[0.98] transform cursor-pointer"
           >
-            <PlusCircle className="w-5 h-5" />
-            Request Blood (SOS)
+            <PlusCircle className="w-5 h-5 text-white" />
+            <span>BROADCAST EMERGENCY SOS</span>
           </button>
         </div>
 
