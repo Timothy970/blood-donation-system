@@ -61,12 +61,16 @@ export interface DonationMade {
   created_at: string;
 }
 
+export type Donation = DonationMade;
+
 export interface RewardStatus {
   total_points: number;
   current_badge: 'None' | 'Bronze' | 'Silver' | 'Gold' | 'Platinum';
   next_badge: string;
   points_needed: number;
 }
+
+export type Reward = RewardStatus;
 
 export interface ChatRow {
   chat_id: number;
@@ -193,6 +197,16 @@ export const donationApi = {
     body: JSON.stringify(payload),
   }),
   rewards: () => request<RewardStatus>('/rewards'),
+};
+
+// Reward API alias
+export const rewardApi = {
+  get: () => donationApi.rewards(),
+};
+
+// User API alias
+export const userApi = {
+  list: () => request<User[]>('/users'),
 };
 
 // Chat APIs

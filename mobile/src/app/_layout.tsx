@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { DarkTheme, DefaultTheme, ThemeProvider as ExpoThemeProvider } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { ThemeProvider, useColorScheme } from '@/hooks/use-color-scheme';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
@@ -20,6 +21,7 @@ function TabLayoutContent() {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
@@ -141,15 +143,27 @@ function TabLayoutContent() {
                   )}
 
                   <Text style={styles.fieldLabel}>PASSWORD</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="••••••••"
-                    placeholderTextColor="#919095"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                    autoCapitalize="none"
-                  />
+                  <View style={styles.passwordContainer}>
+                    <TextInput
+                      style={[styles.input, { flex: 1, marginBottom: 0, borderWidth: 0 }]}
+                      placeholder="••••••••"
+                      placeholderTextColor="#919095"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                    />
+                    <TouchableOpacity 
+                      style={styles.eyeToggleBtn}
+                      onPress={() => setShowPassword(!showPassword)}
+                    >
+                      <Ionicons 
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
+                        size={20} 
+                        color="#919095" 
+                      />
+                    </TouchableOpacity>
+                  </View>
 
                   {isRegisterMode && (
                     <>
@@ -236,7 +250,7 @@ function TabLayoutContent() {
   );
 }
 
-export default function TabLayout() {
+export default function RootLayout() {
   return (
     <ThemeProvider>
       <TabLayoutContent />
@@ -247,8 +261,7 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   loginWrapper: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: '100%',
   },
   scrollContainer: {
     flexGrow: 1,
@@ -258,35 +271,24 @@ const styles = StyleSheet.create({
   },
   loginCard: {
     width: '100%',
-    maxWidth: 440,
+    maxWidth: 420,
     borderRadius: 24,
     borderWidth: 1,
     padding: Spacing.four,
     gap: Spacing.three,
-    shadowColor: '#FF0033',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 15,
-    elevation: 8,
   },
   logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.two,
-    justifyContent: 'center',
+    gap: 12,
   },
   heartIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     backgroundColor: '#FF0033',
-    borderRadius: 12,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#FF0033',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 10,
-    elevation: 6,
+    alignItems: 'center',
   },
   heartText: {
     color: '#ffffff',
@@ -294,57 +296,65 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   brandTitle: {
-    fontSize: 22,
-    fontWeight: '900',
     color: '#E5E2E3',
-    letterSpacing: -0.5,
+    fontSize: 20,
+    fontWeight: '900',
   },
   hudSubtext: {
+    color: '#00F1FE',
     fontSize: 9,
     fontWeight: 'bold',
-    color: '#00F1FE',
     letterSpacing: 1.5,
   },
   tagline: {
-    fontSize: 11,
-    fontWeight: '700',
     color: '#919095',
-    textAlign: 'center',
-    marginBottom: Spacing.one,
+    fontSize: 10,
+    fontWeight: 'bold',
     letterSpacing: 1,
   },
   errorBox: {
     backgroundColor: 'rgba(255, 0, 51, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 0, 51, 0.4)',
+    borderColor: 'rgba(255, 0, 51, 0.3)',
     borderRadius: 12,
-    padding: Spacing.two,
+    padding: 10,
   },
   errorText: {
     color: '#FF5357',
     fontSize: 11,
     fontWeight: 'bold',
-    textAlign: 'center',
   },
   formContainer: {
-    gap: 12,
+    gap: 10,
   },
   fieldLabel: {
+    color: '#919095',
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#919095',
     letterSpacing: 0.5,
+    marginTop: 4,
   },
   input: {
-    borderRadius: 12,
-    borderWidth: 1,
     backgroundColor: '#0E0E0F',
+    borderWidth: 1,
     borderColor: '#2A2A2B',
-    color: '#E5E2E3',
+    borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
+    color: '#E5E2E3',
     fontSize: 13,
-    fontWeight: '600',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0E0E0F',
+    borderWidth: 1,
+    borderColor: '#2A2A2B',
+    borderRadius: 12,
+    paddingRight: 8,
+  },
+  eyeToggleBtn: {
+    padding: 8,
   },
   bloodSelector: {
     flexDirection: 'row',
@@ -368,13 +378,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: Spacing.two,
-    shadowColor: '#FF0033',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 6,
+    marginTop: 10,
   },
   submitBtnText: {
     color: '#ffffff',
@@ -383,7 +387,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   toggleBtn: {
-    marginTop: Spacing.one,
-    padding: 8,
+    paddingVertical: 8,
+    marginTop: 4,
   },
 });

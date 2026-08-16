@@ -1,40 +1,40 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
-import { chatApi, User } from '@/lib/api';
-import { Search, MapPin, Calendar, MessageSquare, Phone, Activity, Heart, Users } from 'lucide-react';
+import { Search, MapPin, Phone, MessageSquare, Activity, User as UserIcon } from 'lucide-react';
+import { userApi, User } from '@/lib/api';
+import Link from 'next/link';
 
 export default function UsersPage() {
-  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [bloodFilter, setBloodFilter] = useState('');
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBloodType, setSelectedBloodType] = useState<string>('');
 
   useEffect(() => {
-    chatApi.users()
-      .then(res => {
-        setUsers(res);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to retrieve users:', err);
-        setLoading(false);
-      });
+    fetchUsers();
   }, []);
 
-  const handleStartChat = (otherId: number) => {
-    router.push(`/chat?other_id=${otherId}`);
+  const fetchUsers = async () => {
+    try {
+      const data = await userApi.list();
+      setUsers(data || []);
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Filter users based on query and blood group
   const filteredUsers = users.filter(user => {
-    const nameMatch = user.username.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                      (user.profile?.city || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const bloodMatch = bloodFilter ? user.profile?.blood_type === bloodFilter : true;
-    return nameMatch && bloodMatch;
+    const matchesSearch =
+      user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (user.profile?.city && user.profile.city.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchesBlood = selectedBloodType ? user.profile?.blood_type === selectedBloodType : true;
+
+    return matchesSearch && matchesBlood;
   });
 
   const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -44,108 +44,118 @@ export default function UsersPage() {
       <Navigation />
 
       <main className="flex-1 p-6 lg:p-10 max-w-7xl mx-auto w-full flex flex-col gap-8">
+        {/* Header */}
         <div>
           <div className="flex items-center gap-3">
             <span className="w-3 h-3 rounded-full bg-[#00FF94] pulse-active shadow-[0_0_12px_rgba(0,255,148,0.8)]" />
-            <h1 className="font-headline text-3xl font-extrabold text-[#E5E2E3] tracking-tight">Registered Donors Directory</h1>
+            <h1 className="font-headline text-3xl font-extrabold text-[#1A1A1A] dark:text-[#E5E2E3] tracking-tight">Registered Donors Directory</h1>
           </div>
-          <p className="text-xs font-mono-hud text-[#00F1FE] mt-1 tracking-wider uppercase">SEARCH DONOR PROFILES, FILTER BY BLOOD GROUP & INITIATE SECURE CHAT</p>
+          <p className="text-xs font-mono-hud text-[#0096C7] dark:text-[#00F1FE] mt-1 tracking-wider uppercase">SEARCH DONOR PROFILES, FILTER BY BLOOD GROUP & INITIATE SECURE CHAT</p>
         </div>
 
-        {/* Filters bar */}
-        <div className="grid sm:grid-cols-12 gap-4">
-          <div className="sm:col-span-8 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-[#919095]" />
+        {/* Filter Section */}
+        <div className="glass-card p-4 rounded-3xl border border-[#E9ECEF] dark:border-[#2A2A2B] flex flex-col md:flex-row gap-4 justify-between items-center shadow-sm">
+          {/* Search Input */}
+          <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 text-[#6C757D] dark:text-[#919095] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search by username or city..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#0E0E0F] border border-[#2A2A2B] focus:border-[#FF5357] focus:ring-1 focus:ring-[#FF5357] focus:outline-none rounded-2xl py-3 pl-11 pr-4 text-sm font-semibold text-[#E5E2E3] placeholder-[#919095]/60 transition"
+              className="w-full bg-[#F1F3F5] dark:bg-[#0E0E0F] border border-[#DEE2E6] dark:border-[#2A2A2B] focus:border-[#FF5357] focus:ring-1 focus:ring-[#FF5357] focus:outline-none rounded-xl py-2.5 pl-10 pr-4 text-xs font-semibold text-[#1A1A1A] dark:text-[#E5E2E3] placeholder-[#6C757D]/60 dark:placeholder-[#919095]/60 transition"
             />
           </div>
 
-          <div className="sm:col-span-4">
-            <select
-              value={bloodFilter}
-              onChange={(e) => setBloodFilter(e.target.value)}
-              className="w-full bg-[#0E0E0F] border border-[#2A2A2B] focus:border-[#FF5357] focus:ring-1 focus:ring-[#FF5357] focus:outline-none rounded-2xl py-3 px-4 text-sm font-semibold text-[#E5E2E3] transition"
+          {/* Blood Type Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+            <button
+              onClick={() => setSelectedBloodType('')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono-hud font-bold transition cursor-pointer ${
+                selectedBloodType === ''
+                  ? 'bg-[#FF0033] text-white shadow-[0_0_10px_rgba(255,0,51,0.4)]'
+                  : 'bg-[#F1F3F5] dark:bg-[#0E0E0F] text-[#6C757D] dark:text-[#919095] hover:text-[#1A1A1A] dark:hover:text-white border border-[#DEE2E6] dark:border-[#2A2A2B]'
+              }`}
             >
-              <option value="">All Blood Types</option>
-              {bloodTypes.map(type => (
-                <option key={type} value={type} className="bg-[#0E0E0F] text-[#E5E2E3]">{type}</option>
-              ))}
-            </select>
+              ALL
+            </button>
+            {bloodTypes.map((type) => (
+              <button
+                key={type}
+                onClick={() => setSelectedBloodType(selectedBloodType === type ? '' : type)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-mono-hud font-bold transition cursor-pointer ${
+                  selectedBloodType === type
+                    ? 'bg-[#FF0033] text-white shadow-[0_0_10px_rgba(255,0,51,0.4)]'
+                    : 'bg-[#F1F3F5] dark:bg-[#0E0E0F] text-[#6C757D] dark:text-[#919095] hover:text-[#1A1A1A] dark:hover:text-white border border-[#DEE2E6] dark:border-[#2A2A2B]'
+                }`}
+              >
+                {type}
+              </button>
+            ))}
           </div>
         </div>
 
+        {/* Directory Grid */}
         {loading ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 py-20">
             <Activity className="w-10 h-10 text-[#FF5357] animate-spin" />
-            <span className="text-[#919095] font-mono-hud text-xs">LISTING DONOR HEROES...</span>
+            <span className="text-[#6C757D] dark:text-[#919095] font-mono-hud text-xs">QUERYING REGISTERED DONORS...</span>
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="glass-card p-12 rounded-3xl border border-[#DEE2E6] dark:border-[#2A2A2B] text-center flex flex-col items-center justify-center gap-3">
+            <UserIcon className="w-12 h-12 text-[#6C757D] dark:text-[#919095]/40" />
+            <p className="font-headline font-bold text-sm text-[#1A1A1A] dark:text-[#E5E2E3]">No Donors Found</p>
+            <p className="text-xs font-mono-hud text-[#6C757D] dark:text-[#919095]">Try refining your search terms or blood group filter.</p>
           </div>
         ) : (
-          <div className="glass-card p-6.5 rounded-3xl border border-[#2A2A2B] flex flex-col gap-5 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-            <h3 className="font-headline font-bold text-[#E5E2E3] text-base flex items-center gap-2">
-              <Users className="w-5 h-5 text-[#FF5357]" />
-              <span>DONOR DIRECTORY MATRIX</span>
-            </h3>
-
-            {filteredUsers.length === 0 ? (
-              <div className="py-24 text-center flex flex-col items-center justify-center gap-3">
-                <Users className="w-12 h-12 text-[#2A2A2B]" />
-                <span className="font-headline font-bold text-sm text-[#E5E2E3]">No Donors Found</span>
-                <span className="text-xs font-mono-hud text-[#919095] max-w-xs leading-normal">
-                  Try refining your search terms or selecting a different blood type filter.
-                </span>
-              </div>
-            ) : (
-              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {filteredUsers.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-[#0E0E0F]/80 border border-[#2A2A2B] p-5 rounded-3xl hover:border-[#FF5357]/40 transition flex flex-col justify-between min-h-[190px] shadow-md"
-                  >
-                    <div className="flex justify-between items-start gap-4">
-                      <div>
-                        <p className="font-headline font-bold text-[#E5E2E3] text-base truncate">{item.username}</p>
-                        <p className="text-xs font-mono-hud text-[#00F1FE] mt-1 flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-[#00F1FE]" /> {item.profile?.city || 'Nairobi'}
-                        </p>
-                        <p className="text-xs font-mono-hud text-[#919095] mt-1 flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-[#919095]" /> Availability: {item.profile?.availability || 'Anyday'}
-                        </p>
-                      </div>
-                      <div className="bg-[#FF0033]/20 border border-[#FF0033]/40 text-[#FF5357] font-mono-hud font-extrabold text-xs px-3.5 py-2 rounded-2xl shadow-sm">
-                        {item.profile?.blood_type || 'A+'}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-[#2A2A2B]">
-                      <button
-                        onClick={() => handleStartChat(item.id)}
-                        className="bg-[#1C1B1C] hover:bg-[#2A2A2B] text-[#E5E2E3] font-headline font-bold py-2 px-3 rounded-xl text-xs border border-white/10 transition flex items-center justify-center gap-2"
-                      >
-                        <MessageSquare className="w-4 h-4 text-[#FF5357]" />
-                        <span>Chat</span>
-                      </button>
-
-                      {item.profile?.phone_number && (
-                        <a
-                          href={`https://wa.me/${item.profile.phone_number.replace(/[^\d]/g, '')}?text=Hello%20${item.username},%20we%20found%20your%20profile%20on%20BloodHero.`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-[#00FF94]/15 hover:bg-[#00FF94]/25 text-[#00FF94] font-headline font-bold py-2 px-3 rounded-xl text-xs border border-[#00FF94]/30 transition flex items-center justify-center gap-2"
-                        >
-                          <Phone className="w-4 h-4 text-[#00FF94]" />
-                          <span>WhatsApp</span>
-                        </a>
-                      )}
-                    </div>
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {filteredUsers.map((donor) => (
+              <div
+                key={donor.id}
+                className="glass-card p-5 rounded-3xl border border-[#E9ECEF] dark:border-[#2A2A2B] hover:border-[#FF5357]/40 transition flex flex-col justify-between gap-4 shadow-sm"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="w-11 h-11 rounded-2xl bg-[#DEE2E6] dark:bg-[#2A2A2B] border border-[#FF5357]/40 flex items-center justify-center font-headline font-bold text-base text-[#FF5357] uppercase shadow-[0_0_10px_rgba(255,83,87,0.2)]">
+                    {donor.username.substring(0, 2)}
                   </div>
-                ))}
+                  <span className="px-2.5 py-1 rounded-xl bg-[#FF0033]/15 border border-[#FF0033]/30 text-[#FF5357] font-mono-hud font-extrabold text-xs">
+                    {donor.profile?.blood_type || 'A+'}
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="font-headline font-bold text-base text-[#1A1A1A] dark:text-[#E5E2E3] truncate">{donor.username}</h3>
+                  <p className="text-xs font-mono-hud text-[#0096C7] dark:text-[#00F1FE] mt-1 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5" /> {donor.profile?.city || 'Nairobi'}
+                  </p>
+                  <p className="text-[11px] text-[#6C757D] dark:text-[#919095] mt-1.5">
+                    Availability: <strong className="text-[#1A1A1A] dark:text-[#E5E2E3]">{donor.profile?.availability || 'Anyday'}</strong>
+                  </p>
+                </div>
+
+                <div className="pt-3 border-t border-[#DEE2E6] dark:border-[#2A2A2B] flex items-center gap-2">
+                  <Link
+                    href={`/chat?other_id=${donor.id}`}
+                    className="flex-1 bg-[#F1F3F5] dark:bg-[#2A2A2B] hover:bg-[#FF0033] hover:text-white border border-[#DEE2E6] dark:border-white/10 text-[#1A1A1A] dark:text-[#E5E2E3] text-xs font-mono-hud font-bold py-2 rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>CHAT</span>
+                  </Link>
+
+                  {donor.profile?.phone_number && (
+                    <a
+                      href={`https://wa.me/${donor.profile.phone_number.replace(/[^\d]/g, '')}?text=Hello%20${donor.username},%20we%20found%20your%20profile%20on%20BloodHero.`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-xl bg-[#00A86B]/15 dark:bg-[#00FF94]/15 border border-[#00A86B]/30 text-[#00A86B] dark:text-[#00FF94] hover:bg-[#00A86B]/30 transition"
+                      title="WhatsApp contact"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
               </div>
-            )}
+            ))}
           </div>
         )}
       </main>

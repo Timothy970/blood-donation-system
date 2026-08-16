@@ -2,371 +2,326 @@
 
 import { useEffect, useState } from 'react';
 import Navigation from '@/components/Navigation';
-import { authApi, getCurrentUser, User } from '@/lib/api';
-import { User as UserIcon, Phone, MapPin, Calendar, Compass, Shield, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { User, Phone, MapPin, Activity, CheckCircle, AlertCircle, Save, Navigation as NavIcon } from 'lucide-react';
+import { authApi, getCurrentUser, rewardApi, Reward } from '@/lib/api';
 
-export default function ProfileSettings() {
-  const [user, setUser] = useState<User | null>(null);
+export default function ProfilePage() {
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [rewards, setRewards] = useState<Reward | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
+  const [detectingLoc, setDetectingLoc] = useState(false);
 
-  // Form states
-  const [phone, setPhone] = useState('');
-  const [city, setCity] = useState('');
-  const [gender, setGender] = useState('M');
-  const [availability, setAvailability] = useState('Anyday');
-  const [bloodType, setBloodType] = useState('A+');
-  const [dob, setDob] = useState('');
-  const [latitude, setLatitude] = useState<number | null>(null);
-  const [longitude, setLongitude] = useState<number | null>(null);
-  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [formData, setFormData] = useState({
+    phone_number: '',
+    city: '',
+    blood_type: 'O-',
+    gender: 'M',
+    availability: 'Anyday',
+    latitude: 0,
+    longitude: 0,
+  });
+
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-      const profile = currentUser.profile;
+    const user = getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      const profile = user.profile;
       if (profile) {
-        setPhone(profile.phone_number || '');
-        setCity(profile.city || '');
-        setGender(profile.gender || 'M');
-        setAvailability(profile.availability || 'Anyday');
-        setBloodType(profile.blood_type || 'A+');
-        setLatitude(profile.latitude || null);
-        setLongitude(profile.longitude || null);
-        if (profile.date_of_birth) {
-          // Format date of birth to YYYY-MM-DD for input[type="date"]
-          const date = new Date(profile.date_of_birth);
-          if (!isNaN(date.getTime())) {
-            setDob(date.toISOString().split('T')[0]);
-          }
-        }
+        setFormData({
+          phone_number: profile.phone_number || '',
+          city: profile.city || '',
+          blood_type: profile.blood_type || 'O-',
+          gender: profile.gender || 'M',
+          availability: profile.availability || 'Anyday',
+          latitude: profile.latitude || 0,
+          longitude: profile.longitude || 0,
+        });
       }
     }
-    setLoading(false);
+
+    rewardApi.get()
+      .then(res => setRewards(res))
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
   }, []);
 
-  const handleDetectLocation = () => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      setErrorMsg('Geolocation is not supported by your browser.');
+      setError('Geolocation is not supported by your browser.');
       return;
     }
 
-    setDetectingLocation(true);
-    setErrorMsg('');
+    setDetectingLoc(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLatitude(position.coords.latitude);
-        setLongitude(position.coords.longitude);
-        setDetectingLocation(false);
+        setFormData(prev => ({
+          ...prev,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        }));
+        setDetectingLoc(false);
       },
-      (error) => {
-        console.error('Error fetching location:', error);
-        setErrorMsg('Failed to obtain location access. Please verify permissions.');
-        setDetectingLocation(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
+      (err) => {
+        console.error(err);
+        setError('Could not get device location. Enter city manually.');
+        setDetectingLoc(false);
+      }
     );
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSuccess('');
+    setError('');
+
+    if (!formData.phone_number.trim()) {
+      setError('Phone Number is required.');
+      return;
+    }
+    if (!formData.city.trim()) {
+      setError('City / Region is required.');
+      return;
+    }
+
     setSaving(true);
-    setSuccessMsg('');
-    setErrorMsg('');
-
     try {
-      const payload = {
-        phone_number: phone,
-        city: city,
-        gender: gender,
-        availability: availability,
-        blood_type: bloodType,
-        latitude: latitude ? Number(latitude) : 0,
-        longitude: longitude ? Number(longitude) : 0,
-        date_of_birth: dob ? new Date(dob).toISOString() : undefined,
-      };
+      await authApi.updateProfile({
+        phone_number: formData.phone_number,
+        city: formData.city,
+        blood_type: formData.blood_type,
+        gender: formData.gender,
+        availability: formData.availability,
+        latitude: Number(formData.latitude) || 0,
+        longitude: Number(formData.longitude) || 0,
+      });
 
-      const res = await authApi.updateProfile(payload);
-      setSuccessMsg(res.message || 'Profile updated successfully!');
-      
-      // Update local state and trigger side navigation update
-      if (res.user) {
-        setUser(res.user);
-        window.dispatchEvent(new Event('profileUpdate'));
-      }
-
-      // Hide success message after 4 seconds
-      setTimeout(() => setSuccessMsg(''), 4000);
+      setSuccess('Profile metrics updated successfully!');
+      setTimeout(() => setSuccess(''), 4000);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to update profile.');
+      setError(err.message || 'Failed to update profile.');
     } finally {
       setSaving(false);
     }
   };
+
+  const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+  const genders = [
+    { key: 'M', label: 'Male' },
+    { key: 'F', label: 'Female' },
+    { key: 'O', label: 'Other' },
+  ];
+  const availabilityOptions = ['Anyday', 'Weekdays', 'Weekends'];
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-[#F8F9FA] dark:bg-[#131314] text-[#1A1A1A] dark:text-[#E5E2E3] selection:bg-[#FF0033] selection:text-white">
       {/* Navigation */}
       <Navigation />
 
-      {/* Main Panel */}
-      <main className="flex-1 p-6 lg:p-10 max-w-4xl mx-auto w-full flex flex-col gap-8">
+      {/* Main Container */}
+      <main className="flex-1 p-6 lg:p-10 max-w-7xl mx-auto w-full flex flex-col gap-8">
         {/* Header */}
-        <div className="flex flex-col gap-2">
+        <div>
           <div className="flex items-center gap-3">
             <span className="w-3 h-3 rounded-full bg-[#00FF94] pulse-active shadow-[0_0_12px_rgba(0,255,148,0.8)]" />
-            <h1 className="font-headline text-2xl lg:text-3xl font-extrabold text-[#E5E2E3] tracking-tight">Digital Donor Card & Profile</h1>
+            <h1 className="font-headline text-3xl font-extrabold text-[#1A1A1A] dark:text-[#E5E2E3] tracking-tight">Digital Donor Card & Profile</h1>
           </div>
-          <p className="text-xs font-mono-hud text-[#00F1FE] tracking-wider uppercase">CLINIC SCAN IDENTIFIER & BIOLOGICAL PROFILE METRICS</p>
+          <p className="text-xs font-mono-hud text-[#0096C7] dark:text-[#00F1FE] mt-1 tracking-wider uppercase">CLINIC SCAN IDENTIFIER & BIOLOGICAL PROFILE METRICS</p>
         </div>
 
         {loading ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 py-20">
-            <Loader2 className="w-10 h-10 text-[#FF5357] animate-spin" />
-            <span className="text-[#919095] font-mono-hud text-sm">INITIALIZING DONOR METRICS...</span>
+            <Activity className="w-10 h-10 text-[#FF5357] animate-spin" />
+            <span className="text-[#6C757D] dark:text-[#919095] font-mono-hud text-xs">ASSEMBLING YOUR DONOR PROFILE...</span>
           </div>
         ) : (
           <div className="flex flex-col gap-8">
             {/* Holographic Digital Donor Card */}
-            <div className="relative overflow-hidden p-6 lg:p-8 rounded-3xl bg-gradient-to-br from-[#1C1B1C] via-[#2A2A2B] to-[#0E0E0F] border border-white/15 shadow-[0_0_40px_rgba(0,0,0,0.6)]">
-              {/* Scanline backdrop */}
-              <div className="absolute inset-0 bg-[radial-gradient(#00F1FE_1px,transparent_1px)] [background-size:16px_16px] opacity-10 pointer-events-none" />
-
-              <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="px-3 py-1 rounded-full bg-[#00FF94]/15 border border-[#00FF94]/40 text-[#00FF94] font-mono-hud text-xs font-bold tracking-widest uppercase">
-                      ✓ ELIGIBLE DONOR
-                    </span>
-                    <span className="text-xs font-mono-hud text-[#919095]">ID: BH-884920</span>
+            <div className="relative overflow-hidden p-6 lg:p-8 rounded-3xl bg-gradient-to-br from-[#F1F3F5] via-white to-[#F1F3F5] dark:from-[#1C1B1C] dark:via-[#2A2A2B] dark:to-[#0E0E0F] border border-[#DEE2E6] dark:border-white/15 shadow-sm">
+              <div className="relative z-10 flex flex-col gap-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-[10px] font-mono-hud font-bold text-[#0096C7] dark:text-[#00F1FE] uppercase tracking-widest">BLOODHERO MEMBER ID</span>
+                    <h2 className="font-headline font-black text-2xl lg:text-3xl text-[#1A1A1A] dark:text-[#E5E2E3] mt-1">{currentUser?.username}</h2>
+                    <p className="text-xs font-mono-hud text-[#6C757D] dark:text-[#919095] mt-1">BH-884920 &bull; NAIROBI REGISTRY</p>
                   </div>
-
-                  <h2 className="font-headline font-black text-2xl lg:text-3xl text-white tracking-tight">{user?.username}</h2>
-                  
-                  <div className="flex flex-wrap items-center gap-4 text-xs font-mono-hud text-[#919095]">
-                    <span>CITY: <strong className="text-white">{city || 'NAIROBI'}</strong></span>
-                    <span>•</span>
-                    <span>PHONE: <strong className="text-[#00F1FE]">{phone || 'UNREGISTERED'}</strong></span>
+                  <div className="px-4 py-2 rounded-2xl bg-[#FF0033] text-white font-mono-hud font-black text-2xl shadow-[0_0_20px_rgba(255,0,51,0.5)]">
+                    {formData.blood_type}
                   </div>
                 </div>
 
-                {/* Blood Group Badge & Mock QR */}
-                <div className="flex items-center gap-4 bg-[#0E0E0F]/80 p-4 rounded-2xl border border-[#00F1FE]/30 shadow-[inset_0_0_15px_rgba(0,241,254,0.1)]">
-                  <div className="flex flex-col items-center justify-center p-3 bg-[#1C1B1C] rounded-xl border border-white/10">
-                    <div className="w-14 h-14 bg-white p-1 rounded-lg flex items-center justify-center">
-                      {/* Stylized QR Code placeholder matrix */}
-                      <div className="w-full h-full bg-[#0E0E0F] grid grid-cols-4 gap-0.5 p-0.5 rounded">
-                        {Array.from({ length: 16 }).map((_, i) => (
-                          <div key={i} className={`rounded-[1px] ${i % 3 === 0 || i % 5 === 0 ? 'bg-white' : 'bg-transparent'}`} />
-                        ))}
-                      </div>
-                    </div>
-                    <span className="text-[9px] font-mono-hud text-[#919095] mt-1">SCAN QR</span>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 py-4 border-y border-[#DEE2E6] dark:border-white/10 text-xs font-mono-hud">
+                  <div>
+                    <span className="text-[#6C757D] dark:text-[#919095] block text-[9px] uppercase">CITY / REGION</span>
+                    <span className="text-[#1A1A1A] dark:text-[#E5E2E3] font-bold mt-0.5 block">{formData.city || 'Nairobi'}</span>
                   </div>
+                  <div>
+                    <span className="text-[#6C757D] dark:text-[#919095] block text-[9px] uppercase">CONTACT PHONE</span>
+                    <span className="text-[#1A1A1A] dark:text-[#E5E2E3] font-bold mt-0.5 block">{formData.phone_number || 'Not set'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#6C757D] dark:text-[#919095] block text-[9px] uppercase">AVAILABILITY</span>
+                    <span className="text-[#00A86B] dark:text-[#00FF94] font-bold mt-0.5 block">{formData.availability}</span>
+                  </div>
+                </div>
 
-                  <div className="flex flex-col items-center justify-center px-4">
-                    <span className="text-[10px] font-mono-hud text-[#919095] uppercase">BLOOD TYPE</span>
-                    <span className="font-headline font-black text-3xl text-[#FF5357] drop-shadow-[0_0_10px_rgba(255,83,87,0.5)]">
-                      {bloodType}
-                    </span>
-                  </div>
+                <div className="flex justify-between items-center text-xs font-mono-hud">
+                  <span className="text-[#00A86B] dark:text-[#00FF94] font-bold flex items-center gap-1.5">
+                    <CheckCircle className="w-4 h-4" /> VERIFIED DONOR HERO
+                  </span>
+                  <span className="text-[#FF5357] font-headline font-bold">♥ BLOODHERO</span>
                 </div>
               </div>
             </div>
 
-            {/* Notification Messages */}
-            {successMsg && (
-              <div className="bg-[#00FF94]/15 border border-[#00FF94]/30 text-[#00FF94] px-5 py-4 rounded-2xl flex items-center gap-3 font-mono-hud text-xs">
-                <CheckCircle2 className="w-5 h-5 shrink-0" />
-                <span>{successMsg}</span>
-              </div>
-            )}
-
-            {errorMsg && (
-              <div className="bg-[#FF0033]/15 border border-[#FF0033]/30 text-[#FF5357] px-5 py-4 rounded-2xl flex items-center gap-3 font-mono-hud text-xs">
-                <AlertCircle className="w-5 h-5 shrink-0 text-[#FF0033]" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            {/* Settings Form Card */}
-            <form onSubmit={handleSave} className="glass-card p-6 lg:p-8 rounded-3xl border border-[#2A2A2B] flex flex-col gap-6 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-              <div className="flex items-center justify-between border-b border-[#2A2A2B] pb-3">
-                <h3 className="font-headline font-bold text-[#E5E2E3] text-base uppercase tracking-wider">
+            {/* Profile Form */}
+            <div className="glass-card p-6 lg:p-8 rounded-3xl border border-[#E9ECEF] dark:border-[#2A2A2B] flex flex-col gap-6 shadow-sm">
+              <div className="flex justify-between items-center border-b border-[#DEE2E6] dark:border-[#2A2A2B] pb-4">
+                <h3 className="font-headline font-bold text-[#1A1A1A] dark:text-[#E5E2E3] text-base uppercase tracking-wider">
                   PERSONAL & HEALTH METRICS
                 </h3>
-                <span className="text-[10px] font-mono-hud text-[#00F1FE] uppercase">SECURE INPUT</span>
+                <span className="text-[10px] font-mono-hud text-[#0096C7] dark:text-[#00F1FE] uppercase">SECURE INPUT</span>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Blood Type Selector */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-mono-hud font-semibold text-[#919095] uppercase">BLOOD GROUP</label>
-                  <select
-                    value={bloodType}
-                    onChange={(e) => setBloodType(e.target.value)}
-                    className="w-full bg-[#0E0E0F] border border-[#2A2A2B] focus:border-[#FF5357] focus:ring-1 focus:ring-[#FF5357] rounded-xl px-4 py-3 text-[#E5E2E3] text-sm font-semibold outline-none transition"
-                  >
-                    {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((bt) => (
-                      <option key={bt} value={bt} className="bg-[#0E0E0F] text-[#E5E2E3]">
-                        {bt}
-                      </option>
-                    ))}
-                  </select>
+              {success && (
+                <div className="bg-[#00FF94]/15 border border-[#00FF94]/30 p-4 rounded-2xl text-[#00A86B] dark:text-[#00FF94] text-xs font-mono-hud flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                  <span>{success}</span>
                 </div>
+              )}
 
-                {/* Phone Number Input */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-mono-hud font-semibold text-[#919095] uppercase">PHONE NUMBER</label>
-                  <div className="relative">
-                    <Phone className="absolute left-4 top-3.5 w-4.5 h-4.5 text-[#919095]" />
+              {error && (
+                <div className="bg-[#FF0033]/15 border border-[#FF0033]/30 p-4 rounded-2xl text-[#FF5357] text-xs font-mono-hud flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0 text-[#FF0033]" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-mono-hud font-semibold text-[#6C757D] dark:text-[#919095] uppercase">PHONE NUMBER</label>
                     <input
                       type="text"
-                      placeholder="e.g. +254 700 000 000"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full bg-[#0E0E0F] border border-[#2A2A2B] focus:border-[#FF5357] focus:ring-1 focus:ring-[#FF5357] rounded-xl pl-11 pr-4 py-3 text-[#E5E2E3] text-sm font-semibold placeholder-[#919095]/60 outline-none transition"
+                      name="phone_number"
                       required
+                      placeholder="+254 700 000 000"
+                      value={formData.phone_number}
+                      onChange={handleInputChange}
+                      className="bg-[#F1F3F5] dark:bg-[#0E0E0F] border border-[#DEE2E6] dark:border-[#2A2A2B] focus:border-[#FF5357] focus:ring-1 focus:ring-[#FF5357] rounded-xl py-3 px-4 text-sm font-semibold text-[#1A1A1A] dark:text-[#E5E2E3] placeholder-[#6C757D]/60 dark:placeholder-[#919095]/60 transition"
                     />
                   </div>
-                </div>
 
-                {/* City Input */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-mono-hud font-semibold text-[#919095] uppercase">CITY / REGION</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-4 top-3.5 w-4.5 h-4.5 text-[#919095]" />
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-mono-hud font-semibold text-[#6C757D] dark:text-[#919095] uppercase">CITY / REGION</label>
                     <input
                       type="text"
-                      placeholder="e.g. Nairobi"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      className="w-full bg-[#0E0E0F] border border-[#2A2A2B] focus:border-[#FF5357] focus:ring-1 focus:ring-[#FF5357] rounded-xl pl-11 pr-4 py-3 text-[#E5E2E3] text-sm font-semibold placeholder-[#919095]/60 outline-none transition"
+                      name="city"
                       required
+                      placeholder="e.g. Mombasa"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      className="bg-[#F1F3F5] dark:bg-[#0E0E0F] border border-[#DEE2E6] dark:border-[#2A2A2B] focus:border-[#FF5357] focus:ring-1 focus:ring-[#FF5357] rounded-xl py-3 px-4 text-sm font-semibold text-[#1A1A1A] dark:text-[#E5E2E3] placeholder-[#6C757D]/60 dark:placeholder-[#919095]/60 transition"
                     />
                   </div>
                 </div>
 
-                {/* Date of Birth Input */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-mono-hud font-semibold text-[#919095] uppercase">DATE OF BIRTH</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-4 top-3.5 w-4.5 h-4.5 text-[#919095]" />
-                    <input
-                      type="date"
-                      value={dob}
-                      onChange={(e) => setDob(e.target.value)}
-                      className="w-full bg-[#0E0E0F] border border-[#2A2A2B] focus:border-[#FF5357] focus:ring-1 focus:ring-[#FF5357] rounded-xl pl-11 pr-4 py-3 text-[#E5E2E3] text-sm font-semibold outline-none transition"
-                      required
-                    />
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-mono-hud font-semibold text-[#6C757D] dark:text-[#919095] uppercase">BLOOD TYPE</label>
+                    <select
+                      name="blood_type"
+                      value={formData.blood_type}
+                      onChange={handleInputChange}
+                      className="bg-[#F1F3F5] dark:bg-[#0E0E0F] border border-[#DEE2E6] dark:border-[#2A2A2B] focus:border-[#FF5357] focus:ring-1 focus:ring-[#FF5357] rounded-xl py-3 px-4 text-sm font-semibold text-[#1A1A1A] dark:text-[#E5E2E3] transition"
+                    >
+                      {bloodTypes.map(t => (
+                        <option key={t} value={t} className="bg-[#FFFFFF] dark:bg-[#0E0E0F] text-[#1A1A1A] dark:text-[#E5E2E3]">{t}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-mono-hud font-semibold text-[#6C757D] dark:text-[#919095] uppercase">GENDER</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {genders.map(g => (
+                        <button
+                          key={g.key}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, gender: g.key })}
+                          className={`py-3 rounded-xl text-xs font-mono-hud font-bold border transition cursor-pointer ${
+                            formData.gender === g.key
+                              ? 'bg-[#FF0033]/15 border-[#FF5357] text-[#FF5357]'
+                              : 'bg-[#F1F3F5] dark:bg-[#0E0E0F] border-[#DEE2E6] dark:border-[#2A2A2B] text-[#6C757D] dark:text-[#919095] hover:text-[#1A1A1A] dark:hover:text-white'
+                          }`}
+                        >
+                          {g.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-mono-hud font-semibold text-[#6C757D] dark:text-[#919095] uppercase">AVAILABILITY</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {availabilityOptions.map(av => (
+                        <button
+                          key={av}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, availability: av })}
+                          className={`py-3 rounded-xl text-xs font-mono-hud font-bold border transition cursor-pointer ${
+                            formData.availability === av
+                              ? 'bg-[#FF0033]/15 border-[#FF5357] text-[#FF5357]'
+                              : 'bg-[#F1F3F5] dark:bg-[#0E0E0F] border-[#DEE2E6] dark:border-[#2A2A2B] text-[#6C757D] dark:text-[#919095] hover:text-[#1A1A1A] dark:hover:text-white'
+                          }`}
+                        >
+                          {av}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                {/* Gender Toggle Selector */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-mono-hud font-semibold text-[#919095] uppercase">GENDER</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { key: 'M', label: 'Male' },
-                      { key: 'F', label: 'Female' },
-                      { key: 'O', label: 'Other' },
-                    ].map((g) => (
-                      <button
-                        type="button"
-                        key={g.key}
-                        onClick={() => setGender(g.key)}
-                        className={`py-3 rounded-xl border text-xs font-mono-hud font-bold transition ${
-                          gender === g.key
-                            ? 'bg-[#FF0033]/20 border-[#FF0033]/40 text-[#FF5357] shadow-[0_0_10px_rgba(255,0,51,0.2)]'
-                            : 'bg-[#0E0E0F] border-[#2A2A2B] text-[#919095] hover:text-[#E5E2E3]'
-                        }`}
-                      >
-                        {g.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Availability Toggle Selector */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-mono-hud font-semibold text-[#919095] uppercase">AVAILABILITY</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {['Anyday', 'Weekdays', 'Weekends'].map((av) => (
-                      <button
-                        type="button"
-                        key={av}
-                        onClick={() => setAvailability(av)}
-                        className={`py-3 rounded-xl border text-xs font-mono-hud font-bold transition ${
-                          availability === av
-                            ? 'bg-[#FF0033]/20 border-[#FF0033]/40 text-[#FF5357] shadow-[0_0_10px_rgba(255,0,51,0.2)]'
-                            : 'bg-[#0E0E0F] border-[#2A2A2B] text-[#919095] hover:text-[#E5E2E3]'
-                        }`}
-                      >
-                        {av}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Geolocation Section */}
-              <div className="border-t border-[#2A2A2B] pt-6 flex flex-col gap-4">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                {/* GPS Coordinates Bar */}
+                <div className="p-4 rounded-2xl bg-[#F1F3F5] dark:bg-[#0E0E0F] border border-[#DEE2E6] dark:border-[#2A2A2B] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
-                    <h4 className="font-headline font-bold text-[#E5E2E3] text-sm flex items-center gap-2">
-                      <Compass className="w-4 h-4 text-[#00F1FE]" />
-                      <span>GPS GEOLOCATION SYNC</span>
-                    </h4>
-                    <p className="text-xs font-mono-hud text-[#919095] mt-0.5">Automates matching with nearby hospital SOS blood requests</p>
+                    <p className="font-headline font-bold text-sm text-[#1A1A1A] dark:text-[#E5E2E3]">GPS Location Coordinates</p>
+                    <p className="text-xs font-mono-hud text-[#6C757D] dark:text-[#919095] mt-0.5">
+                      Lat: <strong className="text-[#0096C7] dark:text-[#00F1FE]">{formData.latitude ? formData.latitude.toFixed(6) : 'Not synced'}</strong> &bull; Long: <strong className="text-[#0096C7] dark:text-[#00F1FE]">{formData.longitude ? formData.longitude.toFixed(6) : 'Not synced'}</strong>
+                    </p>
                   </div>
-                  
+
                   <button
                     type="button"
-                    onClick={handleDetectLocation}
-                    disabled={detectingLocation}
-                    className="bg-[#0E0E0F] border border-[#00F1FE]/40 hover:border-[#00F1FE] text-[#00F1FE] font-mono-hud font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition disabled:opacity-50 shadow-[0_0_15px_rgba(0,241,254,0.1)]"
+                    onClick={handleGetLocation}
+                    disabled={detectingLoc}
+                    className="bg-[#DEE2E6] dark:bg-[#2A2A2B] hover:bg-[#0096C7] dark:hover:bg-[#00F1FE] hover:text-white dark:hover:text-black text-[#1A1A1A] dark:text-[#E5E2E3] px-4 py-2.5 rounded-xl text-xs font-mono-hud font-bold transition flex items-center gap-2 cursor-pointer"
                   >
-                    {detectingLocation ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>LOCATING...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Compass className="w-3.5 h-3.5" />
-                        <span>LOCATE GPS POSITION</span>
-                      </>
-                    )}
+                    <NavIcon className="w-4 h-4" />
+                    <span>{detectingLoc ? 'LOCATING...' : 'SYNC DEVICE GPS'}</span>
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 bg-[#0E0E0F]/80 border border-[#2A2A2B] p-4 rounded-2xl">
-                  <div>
-                    <span className="text-[10px] text-[#919095] font-mono-hud uppercase">LATITUDE</span>
-                    <p className="font-mono text-sm text-[#00F1FE] font-bold mt-0.5">{latitude !== null ? latitude.toFixed(6) : 'NOT SET'}</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-[#919095] font-mono-hud uppercase">LONGITUDE</span>
-                    <p className="font-mono text-sm text-[#00F1FE] font-bold mt-0.5">{longitude !== null ? longitude.toFixed(6) : 'NOT SET'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Submit Buttons */}
-              <div className="flex justify-end gap-3 mt-4 border-t border-[#2A2A2B] pt-6">
                 <button
                   type="submit"
                   disabled={saving}
-                  className="bg-gradient-to-r from-[#FF0033] to-[#FF5357] hover:from-[#FF5357] hover:to-[#FF0033] text-white font-headline font-bold text-xs uppercase px-7 py-3.5 rounded-xl shadow-[0_0_20px_rgba(255,0,51,0.35)] transition flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                  className="mt-2 bg-gradient-to-r from-[#FF0033] to-[#FF5357] hover:from-[#FF5357] hover:to-[#FF0033] text-white font-headline font-bold text-xs uppercase py-4 rounded-2xl transition duration-150 shadow-[0_0_25px_rgba(255,0,51,0.4)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>SAVE PROFILE SETTINGS</span>
+                  <Save className="w-4 h-4" />
+                  <span>{saving ? 'SAVING METRICS...' : 'SAVE PROFILE METRICS'}</span>
                 </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         )}
       </main>
