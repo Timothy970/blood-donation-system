@@ -168,35 +168,37 @@ function ChatContent() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-slate-950 text-slate-100 h-screen overflow-hidden">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#F8F9FA] dark:bg-[#131314] text-[#1A1A1A] dark:text-[#E5E2E3] h-screen overflow-hidden selection:bg-[#FF0033] selection:text-white">
       <Navigation />
 
-      <main className="flex-1 flex overflow-hidden border-t lg:border-t-0 border-slate-900">
+      <main className="flex-1 flex overflow-hidden border-t lg:border-t-0 border-[#2A2A2B]">
         {loading ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
-            <Activity className="w-10 h-10 text-red-500 animate-spin" />
-            <span className="text-slate-500 font-semibold">Tuning Blood Heroes...</span>
+            <Activity className="w-10 h-10 text-[#FF5357] animate-spin" />
+            <span className="text-[#919095] font-mono-hud text-xs">TUNING BLOOD HERO CHANNELS...</span>
           </div>
         ) : (
           <div className="flex-1 flex h-full overflow-hidden">
             {/* Left Sidebar - Chat list */}
-            <div className={`w-full md:w-80 lg:w-96 border-r border-slate-900 flex flex-col bg-slate-950 h-full ${
+            <div className={`w-full md:w-80 lg:w-96 border-r border-[#2A2A2B] flex flex-col bg-[#0E0E0F] h-full ${
               activeChat ? 'hidden md:flex' : 'flex'
             }`}>
-              <div className="p-6 border-b border-slate-900">
-                <h3 className="font-extrabold text-slate-100 text-lg flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-red-500" /> Active Conversations
+              <div className="p-6 border-b border-[#2A2A2B]">
+                <h3 className="font-headline font-bold text-[#E5E2E3] text-base flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-[#FF5357]" />
+                  <span>ACTIVE CONVERSATIONS</span>
                 </h3>
+                <span className="text-[10px] font-mono-hud text-[#00F1FE] uppercase">ENCRYPTED WEBSOCKET MESH</span>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
                 {chats.length === 0 ? (
                   <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
-                    <MessageSquare className="w-10 h-10 text-slate-800" />
-                    <span className="font-bold text-xs text-slate-500">No Chats Started</span>
+                    <MessageSquare className="w-10 h-10 text-[#2A2A2B]" />
+                    <span className="font-headline font-bold text-xs text-[#919095]">No Chats Started</span>
                     <button 
                       onClick={() => router.push('/users')}
-                      className="text-xs text-red-400 font-bold hover:underline"
+                      className="text-xs font-mono-hud text-[#FF5357] font-bold hover:underline uppercase"
                     >
                       Find a donor to chat with
                     </button>
@@ -210,24 +212,24 @@ function ChatContent() {
                         onClick={() => handleSelectChat(row)}
                         className={`w-full p-4.5 rounded-2xl border text-left flex gap-3 transition ${
                           isSelected 
-                            ? 'bg-red-950/20 border-red-900/35 text-red-500' 
-                            : 'bg-slate-950 border-slate-900/40 hover:border-slate-800/70'
+                            ? 'bg-[#FF0033]/20 border-[#FF0033]/40 text-[#FF5357] shadow-[0_0_15px_rgba(255,0,51,0.2)]' 
+                            : 'bg-[#1C1B1C]/60 border-[#2A2A2B] hover:border-[#FF5357]/30'
                         }`}
                       >
-                        <div className="w-10 h-10 rounded-full bg-red-950/50 border border-red-900/20 flex items-center justify-center font-bold text-red-500 uppercase text-xs">
+                        <div className="w-10 h-10 rounded-xl bg-[#2A2A2B] border border-[#FF5357]/40 flex items-center justify-center font-headline font-bold text-[#FF5357] uppercase text-xs">
                           {row.other_user.username.substring(0, 2)}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-center">
-                            <span className="font-bold text-slate-100 text-sm truncate">{row.other_user.username}</span>
-                            <span className="text-[10px] text-slate-500 shrink-0">
+                            <span className="font-headline font-bold text-[#E5E2E3] text-sm truncate">{row.other_user.username}</span>
+                            <span className="text-[10px] font-mono-hud text-[#919095] shrink-0">
                               {row.timestamp ? new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-400 mt-1 truncate">{row.latest_message || 'Start chatting...'}</p>
+                          <p className="text-xs font-sans text-[#919095] mt-1 truncate">{row.latest_message || 'Start chatting...'}</p>
                         </div>
                         {row.unread_count > 0 && (
-                          <span className="bg-red-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center self-center shrink-0">
+                          <span className="bg-[#FF0033] text-white text-[10px] font-mono-hud font-extrabold w-5 h-5 rounded-full flex items-center justify-center self-center shrink-0 shadow-[0_0_10px_rgba(255,0,51,0.6)]">
                             {row.unread_count}
                           </span>
                         )}
@@ -239,26 +241,26 @@ function ChatContent() {
             </div>
 
             {/* Right Chat Panel */}
-            <div className={`flex-1 flex flex-col h-full bg-slate-950/60 ${
+            <div className={`flex-1 flex flex-col h-full bg-[#131314] ${
               activeChat ? 'flex' : 'hidden md:flex items-center justify-center'
             }`}>
               {activeChat ? (
                 <div className="flex-1 flex flex-col h-full overflow-hidden">
                   {/* Active Header */}
-                  <div className="p-4 border-b border-slate-900 flex justify-between items-center bg-slate-950/80">
+                  <div className="p-4 border-b border-[#2A2A2B] flex justify-between items-center bg-[#0E0E0F]">
                     <div className="flex items-center gap-3">
                       <button 
                         onClick={() => setActiveChat(null)} 
-                        className="md:hidden text-slate-400 hover:text-slate-100 mr-2 text-sm font-bold"
+                        className="md:hidden text-[#919095] hover:text-[#E5E2E3] mr-2 text-xs font-mono-hud font-bold"
                       >
-                        ← Back
+                        ← BACK
                       </button>
-                      <div className="w-10 h-10 rounded-full bg-red-950/40 border border-red-800/35 flex items-center justify-center font-extrabold text-red-500 uppercase text-sm">
+                      <div className="w-10 h-10 rounded-xl bg-[#2A2A2B] border border-[#FF5357]/40 flex items-center justify-center font-headline font-bold text-[#FF5357] uppercase text-sm">
                         {activeChat.other_user.username.substring(0, 2)}
                       </div>
                       <div>
-                        <h4 className="font-bold text-slate-100 text-sm">{activeChat.other_user.username}</h4>
-                        <p className="text-[10px] text-red-400 font-bold mt-0.5">Blood: {activeChat.other_user.profile?.blood_type || 'A+'}</p>
+                        <h4 className="font-headline font-bold text-[#E5E2E3] text-sm">{activeChat.other_user.username}</h4>
+                        <p className="text-[10px] font-mono-hud text-[#00F1FE] font-bold mt-0.5">BLOOD TYPE: {activeChat.other_user.profile?.blood_type || 'A+'}</p>
                       </div>
                     </div>
                   </div>
@@ -267,8 +269,8 @@ function ChatContent() {
                   <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
                     {messages.length === 0 ? (
                       <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
-                        <MessageSquare className="w-10 h-10 text-slate-800" />
-                        <span className="text-xs text-slate-500">No message history. Send a message to start conversation.</span>
+                        <MessageSquare className="w-10 h-10 text-[#2A2A2B]" />
+                        <span className="text-xs font-mono-hud text-[#919095]">No message history. Send a message to start conversation.</span>
                       </div>
                     ) : (
                       messages.map((msg) => {
@@ -280,14 +282,14 @@ function ChatContent() {
                               isMine ? 'self-end items-end' : 'self-start items-start'
                             }`}
                           >
-                            <div className={`p-4.5 rounded-3xl text-sm leading-relaxed ${
+                            <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
                               isMine 
-                                ? 'bg-red-600 text-white rounded-br-none shadow-md shadow-red-950/20' 
-                                : 'bg-slate-900 text-slate-100 rounded-bl-none border border-slate-800/80'
+                                ? 'bg-gradient-to-r from-[#FF0033] to-[#FF5357] text-white rounded-br-none shadow-[0_0_15px_rgba(255,0,51,0.25)]' 
+                                : 'bg-[#1C1B1C] text-[#E5E2E3] rounded-bl-none border border-[#2A2A2B]'
                             }`}>
                               {msg.content}
                             </div>
-                            <span className="text-[9px] text-slate-500 mt-1.5 px-1.5">
+                            <span className="text-[9px] font-mono-hud text-[#919095] mt-1 px-1.5">
                               {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
@@ -298,7 +300,7 @@ function ChatContent() {
                   </div>
 
                   {/* Message Input Box */}
-                  <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-900 bg-slate-950">
+                  <form onSubmit={handleSendMessage} className="p-4 border-t border-[#2A2A2B] bg-[#0E0E0F]">
                     <div className="relative flex gap-3">
                       <input
                         type="text"
@@ -306,11 +308,11 @@ function ChatContent() {
                         placeholder="Write your message..."
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
-                        className="flex-1 bg-slate-900 border border-slate-800/80 focus:border-red-600 focus:outline-none rounded-2xl py-3 px-5 text-sm font-semibold transition"
+                        className="flex-1 bg-[#131314] border border-[#2A2A2B] focus:border-[#FF5357] focus:ring-1 focus:ring-[#FF5357] rounded-2xl py-3 px-5 text-sm font-semibold text-[#E5E2E3] placeholder-[#919095]/60 outline-none transition"
                       />
                       <button
                         type="submit"
-                        className="bg-red-600 hover:bg-red-500 text-white p-3 rounded-2xl shadow-lg shadow-red-950/25 transition duration-150 transform hover:scale-[1.03] active:scale-[0.97]"
+                        className="bg-gradient-to-r from-[#FF0033] to-[#FF5357] hover:from-[#FF5357] hover:to-[#FF0033] text-white p-3.5 rounded-2xl shadow-[0_0_20px_rgba(255,0,51,0.4)] transition duration-150 transform hover:scale-[1.03] active:scale-[0.97]"
                       >
                         <Send className="w-5 h-5" />
                       </button>
@@ -319,12 +321,12 @@ function ChatContent() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-3.5 text-center px-6">
-                  <div className="bg-slate-900/50 border border-slate-800/80 p-5.5 rounded-full text-slate-600">
+                  <div className="bg-[#1C1B1C] border border-[#2A2A2B] p-5.5 rounded-2xl text-[#FF5357]">
                     <MessageSquare className="w-10 h-10" />
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-slate-100 text-base">Select a Conversation</h3>
-                    <p className="text-xs text-slate-500 max-w-xs mt-1.5 leading-normal">
+                    <h3 className="font-headline font-bold text-[#E5E2E3] text-base">Select a Conversation</h3>
+                    <p className="text-xs font-mono-hud text-[#919095] max-w-xs mt-1.5 leading-normal">
                       Pick a contact from the panel on the left or search the donor directory to coordinate blood transfers.
                     </p>
                   </div>
@@ -341,13 +343,12 @@ function ChatContent() {
 export default function ChatPage() {
   return (
     <Suspense fallback={
-      <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 justify-center items-center gap-4">
-        <Activity className="w-10 h-10 text-red-500 animate-spin" />
-        <span className="text-slate-500 font-semibold">Tuning Blood Heroes...</span>
+      <div className="flex flex-col min-h-screen bg-[#131314] text-[#E5E2E3] justify-center items-center gap-4">
+        <Activity className="w-10 h-10 text-[#FF5357] animate-spin" />
+        <span className="text-[#919095] font-mono-hud text-xs">TUNING BLOOD HERO CHANNELS...</span>
       </div>
     }>
       <ChatContent />
     </Suspense>
   );
 }
-

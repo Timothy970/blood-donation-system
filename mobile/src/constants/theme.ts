@@ -8,19 +8,59 @@ import '@/global.css';
 import { Platform } from 'react-native';
 
 export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-  },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    background: '#131314',
+    backgroundDim: '#0E0E0F',
+    surfaceContainer: '#1C1B1C',
+    surfaceHigh: '#2A2A2B',
+    surfaceHighest: '#353436',
+    
+    backgroundElement: '#1C1B1C',
+    backgroundSelected: '#2A2A2B',
+    
+    primary: '#FF5357',
+    primaryNeon: '#FF0033',
+    secondary: '#00F1FE',
+    secondaryBright: '#74F5FF',
+    
+    text: '#E5E2E3',
+    textSecondary: '#919095',
+    textMuted: '#919095',
+    textDim: '#5F3E3D',
+    
+    bioGreen: '#00FF94',
+    warningGold: '#FFAB00',
+    
+    glassBorder: 'rgba(255, 255, 255, 0.1)',
+    cyanGlow: 'rgba(0, 241, 254, 0.2)',
+    crimsonGlow: 'rgba(255, 0, 51, 0.25)',
+  },
+  light: {
+    background: '#F8F9FA',
+    backgroundDim: '#F1F3F5',
+    surfaceContainer: '#FFFFFF',
+    surfaceHigh: '#E9ECEF',
+    surfaceHighest: '#DEE2E6',
+    
+    backgroundElement: '#FFFFFF',
+    backgroundSelected: '#E9ECEF',
+    
+    primary: '#FF5357',
+    primaryNeon: '#FF0033',
+    secondary: '#0096C7',
+    secondaryBright: '#00F1FE',
+    
+    text: '#1A1A1A',
+    textSecondary: '#6C757D',
+    textMuted: '#6C757D',
+    textDim: '#ADB5BD',
+    
+    bioGreen: '#00A86B',
+    warningGold: '#D97706',
+    
+    glassBorder: 'rgba(0, 0, 0, 0.1)',
+    cyanGlow: 'rgba(0, 150, 199, 0.2)',
+    crimsonGlow: 'rgba(255, 0, 51, 0.25)',
   },
 } as const;
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { StyleSheet, ScrollView, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemeContext } from '@/context/theme-context';
@@ -8,6 +9,7 @@ import { mobileApi, getCurrentUser, addAuthListener } from '@/utils/api';
 
 export default function ExploreScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const { colorScheme, toggleColorScheme } = useContext(ThemeContext);
   
   const [user, setUser] = useState<any | null>(null);
@@ -79,8 +81,8 @@ export default function ExploreScreen() {
         longitude: longitude ? Number(longitude) : 0,
       };
 
-      const res = await mobileApi.auth.updateProfile(payload);
-      setSaveSuccess('Profile updated successfully!');
+      await mobileApi.auth.updateProfile(payload);
+      setSaveSuccess('Profile settings updated successfully!');
       setTimeout(() => setSaveSuccess(''), 4000);
     } catch (err: any) {
       setSaveError(err.message || 'Failed to update profile settings.');
@@ -107,7 +109,7 @@ export default function ExploreScreen() {
       },
       (error) => {
         console.log('Error detecting location on mobile:', error);
-        setSaveError('Failed to capture location. Verify permissions.');
+        setSaveError('Failed to capture location. Verify device permissions.');
         setDetectingLocation(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -119,25 +121,6 @@ export default function ExploreScreen() {
   const displayBloodType = user?.profile?.blood_type || bloodType;
   const displayCity = user?.profile?.city || city;
   const displayPhoneNumber = user?.profile?.phone_number || phone;
-  const totalPoints = rewards?.total_points ?? 45;
-  const currentBadge = rewards?.current_badge || 'Bronze';
-  const pointsNeeded = rewards?.points_needed ?? 155;
-  const nextBadge = rewards?.next_badge || 'Silver';
-
-  // Calculate whole blood cooldown timeline
-  const getCooldownDays = () => {
-    const lastDate = new Date('2026-05-10');
-    const diffTime = Math.abs(new Date().getTime() - lastDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 56) {
-      return 56 - diffDays;
-    }
-    return 0;
-  };
-
-  const cooldownDays = getCooldownDays();
-  const eligible = cooldownDays === 0;
 
   // Simple QR Code matrix grid generator (representing QR content dynamically)
   const renderMockQR = () => {
@@ -152,22 +135,16 @@ export default function ExploreScreen() {
           (r >= size - 4 && c < 4);
         const randomBlock = Math.random() > 0.45;
         const active = isCorner || randomBlock;
-        const pixelColor = active 
-          ? (colorScheme === 'dark' ? '#ffffff' : '#000000') 
-          : (colorScheme === 'dark' ? '#020617' : '#ffffff');
         cols.push(
           <View 
             key={`${r}-${c}`} 
-            style={[
-              styles.qrPixel, 
-              { backgroundColor: pixelColor }
-            ]} 
+            style={[styles.qrPixel, { backgroundColor: active ? theme.text : theme.backgroundDim }]} 
           />
         );
       }
       matrix.push(<View key={r} style={styles.qrRow}>{cols}</View>);
     }
-    return <View style={[styles.qrContainer, { backgroundColor: colorScheme === 'dark' ? '#020617' : '#ffffff', borderColor: theme.backgroundSelected }]}>{matrix}</View>;
+    return <View style={[styles.qrContainer, { backgroundColor: theme.backgroundDim, borderColor: theme.backgroundSelected }]}>{matrix}</View>;
   };
 
   const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -184,67 +161,54 @@ export default function ExploreScreen() {
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: theme.backgroundSelected }]}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={[styles.headerTitle, { color: theme.text }]}>Profile & Settings</Text>
-            <TouchableOpacity
-              onPress={toggleColorScheme}
-              style={{
-                padding: Spacing.two,
-                borderRadius: 10,
-                backgroundColor: theme.backgroundElement,
-                borderWidth: 1,
-                borderColor: theme.backgroundSelected,
-                justifyContent: 'center',
-                alignItems: 'center'
-              }}
-              activeOpacity={0.7}
-            >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={[styles.statusDot, { backgroundColor: theme.primary }]} />
+              <Text style={[styles.headerTitle, { color: theme.text }]}>Digital Donor Card & Profile</Text>
+            </View>
+            <TouchableOpacity onPress={toggleColorScheme} style={[styles.themeToggleBtn, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
               <Text style={{ fontSize: 16 }}>{colorScheme === 'dark' ? '☀️' : '🌙'}</Text>
             </TouchableOpacity>
           </View>
-          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Manage your metrics, details, and geolocation matching</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.secondary }]}>CLINIC SCAN IDENTIFIER & BIOLOGICAL PROFILE METRICS</Text>
         </View>
 
         {loading ? (
-          <ActivityIndicator color="#dc2626" style={{ marginVertical: 40 }} />
+          <ActivityIndicator color={theme.primary} size="large" style={{ marginVertical: 40 }} />
         ) : (
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-          >
-            {/* Glowing Donor Card */}
-            <View style={styles.cardGlowWrapper}>
-              <View style={styles.donorCard}>
-                <View style={styles.cardHeader}>
-                  <View>
-                    <Text style={styles.cardLabel}>BLOODHERO MEMBER</Text>
-                    <Text style={styles.cardName}>{username}</Text>
-                  </View>
-                  <View style={styles.bloodBadge}>
-                    <Text style={styles.bloodText}>{displayBloodType}</Text>
-                  </View>
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+            {/* Holographic Donor Card */}
+            <View style={[styles.donorCard, { backgroundColor: theme.backgroundElement, borderColor: 'rgba(255, 0, 51, 0.4)' }]}>
+              <View style={styles.cardHeader}>
+                <View>
+                  <Text style={[styles.cardLabel, { color: theme.secondary }]}>BLOODHERO MEMBER ID</Text>
+                  <Text style={[styles.cardName, { color: theme.text }]}>{username}</Text>
+                  <Text style={[styles.cardSub, { color: theme.textSecondary }]}>BH-884920 • NAIROBI REGISTRY</Text>
                 </View>
+                <View style={[styles.bloodBadge, { backgroundColor: theme.primaryNeon }]}>
+                  <Text style={styles.bloodText}>{displayBloodType}</Text>
+                </View>
+              </View>
 
-                <View style={styles.cardMid}>
-                  <View>
-                    <Text style={styles.infoLabel}>CITY</Text>
-                    <Text style={styles.infoValue}>{displayCity}</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.infoLabel}>PHONE</Text>
-                    <Text style={styles.infoValue}>{displayPhoneNumber}</Text>
-                  </View>
+              <View style={styles.cardMid}>
+                <View>
+                  <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>CITY / REGION</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>{displayCity || 'Nairobi'}</Text>
                 </View>
+                <View>
+                  <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>CONTACT PHONE</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>{displayPhoneNumber || 'Not set'}</Text>
+                </View>
+              </View>
 
-                <View style={styles.cardFooter}>
-                  <Text style={styles.verifiedText}>✓ Verified Digital Record</Text>
-                  <Text style={styles.logoText}>♥</Text>
-                </View>
+              <View style={[styles.cardFooter, { borderTopColor: theme.backgroundSelected }]}>
+                <Text style={[styles.verifiedText, { color: theme.bioGreen }]}>✓ ELIGIBLE DONOR</Text>
+                <Text style={[styles.logoText, { color: theme.primary }]}>♥ BLOODHERO</Text>
               </View>
             </View>
 
-            {/* Profile Settings Interactive Form */}
+            {/* Profile & Health Details Form */}
             <View style={[styles.settingsForm, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>⚙ Personal Settings</Text>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>⚙ PERSONAL & HEALTH DETAILS</Text>
 
               {saveSuccess ? (
                 <View style={styles.successBox}>
@@ -259,9 +223,9 @@ export default function ExploreScreen() {
               ) : null}
 
               <View style={styles.formGroup}>
-                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Phone Number</Text>
+                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>PHONE NUMBER</Text>
                 <TextInput
-                  style={[styles.input, { color: theme.text, backgroundColor: theme.background, borderColor: theme.backgroundSelected }]}
+                  style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundDim, borderColor: theme.backgroundSelected }]}
                   placeholder="+254 700 000 000"
                   placeholderTextColor={theme.textSecondary}
                   value={phone}
@@ -271,9 +235,9 @@ export default function ExploreScreen() {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>City / Region</Text>
+                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>CITY / REGION</Text>
                 <TextInput
-                  style={[styles.input, { color: theme.text, backgroundColor: theme.background, borderColor: theme.backgroundSelected }]}
+                  style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundDim, borderColor: theme.backgroundSelected }]}
                   placeholder="e.g. Mombasa"
                   placeholderTextColor={theme.textSecondary}
                   value={city}
@@ -282,7 +246,7 @@ export default function ExploreScreen() {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Blood Type</Text>
+                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>BLOOD TYPE</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalSelector}>
                   {bloodTypes.map(type => {
                     const isSelected = bloodType === type;
@@ -290,10 +254,9 @@ export default function ExploreScreen() {
                       <TouchableOpacity
                         key={type}
                         style={[
-                          styles.selectorBubble,
-                          isSelected 
-                            ? { backgroundColor: '#dc2626', borderColor: '#dc2626' } 
-                            : { backgroundColor: theme.background, borderColor: theme.backgroundSelected }
+                          styles.selectorBubble, 
+                          { backgroundColor: theme.backgroundDim, borderColor: theme.backgroundSelected },
+                          isSelected && { backgroundColor: theme.primaryNeon, borderColor: theme.primary }
                         ]}
                         onPress={() => setBloodType(type)}
                       >
@@ -307,7 +270,7 @@ export default function ExploreScreen() {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Gender</Text>
+                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>GENDER</Text>
                 <View style={styles.gendersContainer}>
                   {genders.map(g => {
                     const isSelected = gender === g.key;
@@ -315,14 +278,13 @@ export default function ExploreScreen() {
                       <TouchableOpacity
                         key={g.key}
                         style={[
-                          styles.genderBtn,
-                          isSelected 
-                            ? { backgroundColor: 'rgba(220, 38, 38, 0.15)', borderColor: '#dc2626' } 
-                            : { backgroundColor: theme.background, borderColor: theme.backgroundSelected }
+                          styles.genderBtn, 
+                          { backgroundColor: theme.backgroundDim, borderColor: theme.backgroundSelected },
+                          isSelected && { backgroundColor: 'rgba(255, 0, 51, 0.15)', borderColor: theme.primaryNeon }
                         ]}
                         onPress={() => setGender(g.key)}
                       >
-                        <Text style={[styles.genderBtnText, { color: isSelected ? '#ef4444' : theme.text }]}>
+                        <Text style={[styles.genderBtnText, { color: isSelected ? theme.primary : theme.textSecondary }]}>
                           {g.label}
                         </Text>
                       </TouchableOpacity>
@@ -332,7 +294,7 @@ export default function ExploreScreen() {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Availability</Text>
+                <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>AVAILABILITY</Text>
                 <View style={styles.gendersContainer}>
                   {availabilityOptions.map(av => {
                     const isSelected = availability === av;
@@ -340,14 +302,13 @@ export default function ExploreScreen() {
                       <TouchableOpacity
                         key={av}
                         style={[
-                          styles.genderBtn,
-                          isSelected 
-                            ? { backgroundColor: 'rgba(220, 38, 38, 0.15)', borderColor: '#dc2626' } 
-                            : { backgroundColor: theme.background, borderColor: theme.backgroundSelected }
+                          styles.genderBtn, 
+                          { backgroundColor: theme.backgroundDim, borderColor: theme.backgroundSelected },
+                          isSelected && { backgroundColor: 'rgba(255, 0, 51, 0.15)', borderColor: theme.primaryNeon }
                         ]}
                         onPress={() => setAvailability(av)}
                       >
-                        <Text style={[styles.genderBtnText, { color: isSelected ? '#ef4444' : theme.text }]}>
+                        <Text style={[styles.genderBtnText, { color: isSelected ? theme.primary : theme.textSecondary }]}>
                           {av}
                         </Text>
                       </TouchableOpacity>
@@ -357,21 +318,17 @@ export default function ExploreScreen() {
               </View>
 
               {/* Geolocation Section */}
-              <View style={[styles.locationBox, { borderColor: theme.backgroundSelected }]}>
+              <View style={[styles.locationBox, { backgroundColor: theme.backgroundDim, borderColor: theme.backgroundSelected }]}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <View style={{ flex: 1, marginRight: Spacing.two }}>
+                  <View style={{ flex: 1, marginRight: 8 }}>
                     <Text style={[styles.locationTitle, { color: theme.text }]}>GPS Coordinates</Text>
-                    <Text style={{ color: theme.textSecondary, fontSize: 10 }}>Sync coordinates for local emergency alerts</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 10 }}>Sync device location for emergency SOS alerts</Text>
                   </View>
-                  <TouchableOpacity
-                    style={[styles.locateBtn, { backgroundColor: theme.background }]}
-                    onPress={handleDetectLocation}
-                    disabled={detectingLocation}
-                  >
+                  <TouchableOpacity style={[styles.locateBtn, { backgroundColor: theme.backgroundElement, borderColor: theme.primary }]} onPress={handleDetectLocation} disabled={detectingLocation}>
                     {detectingLocation ? (
-                      <ActivityIndicator size="small" color="#dc2626" />
+                      <ActivityIndicator size="small" color={theme.primary} />
                     ) : (
-                      <Text style={[styles.locateBtnText, { color: theme.text }]}>🛰 Locate</Text>
+                      <Text style={[styles.locateBtnText, { color: theme.secondary }]}>🛰 Locate</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -379,91 +336,41 @@ export default function ExploreScreen() {
                 <View style={styles.coordinatesRow}>
                   <View style={styles.coordCol}>
                     <Text style={{ color: theme.textSecondary, fontSize: 9 }}>LATITUDE</Text>
-                    <Text style={[styles.coordVal, { color: theme.text }]}>
+                    <Text style={[styles.coordVal, { color: theme.secondary }]}>
                       {latitude !== null ? latitude.toFixed(6) : 'Not set'}
                     </Text>
                   </View>
                   <View style={styles.coordCol}>
                     <Text style={{ color: theme.textSecondary, fontSize: 9 }}>LONGITUDE</Text>
-                    <Text style={[styles.coordVal, { color: theme.text }]}>
+                    <Text style={[styles.coordVal, { color: theme.secondary }]}>
                       {longitude !== null ? longitude.toFixed(6) : 'Not set'}
                     </Text>
                   </View>
                 </View>
               </View>
 
-              {/* Submit Save Button */}
-              <TouchableOpacity
-                style={styles.saveBtn}
-                onPress={handleSaveSettings}
-                disabled={saving}
-              >
+              {/* Save Settings Button */}
+              <TouchableOpacity style={[styles.saveBtn, { backgroundColor: theme.primaryNeon }]} onPress={handleSaveSettings} disabled={saving}>
                 {saving ? (
                   <ActivityIndicator color="#ffffff" />
                 ) : (
-                  <Text style={styles.saveBtnText}>Save Profile Settings</Text>
+                  <Text style={styles.saveBtnText}>SAVE PROFILE SETTINGS</Text>
                 )}
               </TouchableOpacity>
             </View>
 
-            {/* Rewards Card */}
-            <View style={[styles.rewardsCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>🏆 Rewards & Level</Text>
-              <View style={styles.rewardsInfoRow}>
-                <View>
-                  <Text style={{ color: theme.textSecondary, fontSize: 11 }}>TOTAL POINTS</Text>
-                  <Text style={{ color: theme.text, fontSize: 20, fontWeight: 'bold', marginTop: 4 }}>
-                    {totalPoints} XP
-                  </Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ color: theme.textSecondary, fontSize: 11 }}>CURRENT BADGE</Text>
-                  <Text style={{ color: '#ef4444', fontSize: 16, fontWeight: 'bold', marginTop: 4 }}>
-                    🏅 {currentBadge}
-                  </Text>
-                </View>
-              </View>
-              
-              {pointsNeeded > 0 && (
-                <Text style={{ color: theme.textSecondary, fontSize: 11, marginTop: 8 }}>
-                  Earn {pointsNeeded} more points to reach {nextBadge} badge!
-                </Text>
-              )}
-            </View>
-
             {/* QR Code Presentation */}
             <View style={[styles.qrBox, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
-              <Text style={[styles.qrLabel, { color: theme.text }]}>SCAN FOR CLINIC INTAKE</Text>
+              <Text style={[styles.qrLabel, { color: theme.secondary }]}>SCAN FOR CLINIC INTAKE</Text>
               {renderMockQR()}
               <Text style={[styles.qrDesc, { color: theme.textSecondary }]}>
-                Allows hospitals to scan your member profile and log donation quantity automatically.
-              </Text>
-            </View>
-
-            {/* Status Tracker */}
-            <View style={[
-              styles.statusCard,
-              eligible ? styles.statusEligible : styles.statusCooling
-            ]}>
-              <Text style={[styles.statusTitle, { color: eligible ? '#34d399' : '#f87171' }]}>
-                {eligible ? 'Eligible to Donate' : 'Waiting Period (Cooling Down)'}
-              </Text>
-              <Text style={[styles.statusDesc, { color: theme.textSecondary }]}>
-                {eligible 
-                  ? 'Your red blood cells have recovered. You are fully eligible to donate whole blood!'
-                  : `You recently donated. Please wait another ${cooldownDays} days before booking your next appointment.`
-                }
+                Allows clinics to scan your digital profile and record blood donation quantity automatically.
               </Text>
             </View>
 
             {/* Logout Button */}
-            <TouchableOpacity
-              style={[styles.logoutBtn, { borderColor: theme.backgroundSelected }]}
-              onPress={() => {
-                mobileApi.auth.logout();
-              }}
-            >
-              <Text style={[styles.logoutBtnText, { color: '#ef4444' }]}>Sign Out</Text>
+            <TouchableOpacity style={[styles.logoutBtn, { backgroundColor: 'rgba(255, 0, 51, 0.1)', borderColor: 'rgba(255, 0, 51, 0.3)' }]} onPress={() => mobileApi.auth.logout()}>
+              <Text style={[styles.logoutBtnText, { color: theme.primary }]}>SIGN OUT</Text>
             </TouchableOpacity>
           </ScrollView>
         )}
@@ -486,82 +393,82 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  themeToggleBtn: {
+    padding: 8,
+    borderRadius: 10,
+    borderWidth: 1,
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: 9,
+    fontWeight: 'bold',
     marginTop: 4,
-    fontWeight: '600',
+    letterSpacing: 1.2,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: BottomTabInset + Spacing.six,
+    paddingBottom: BottomTabInset + 60,
     paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.six,
-    gap: Spacing.five,
-  },
-  cardGlowWrapper: {
-    shadowColor: '#dc2626',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
-    elevation: 10,
+    paddingTop: Spacing.four,
+    gap: 16,
   },
   donorCard: {
-    backgroundColor: '#991b1b',
     borderRadius: 24,
-    padding: Spacing.five,
+    padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    gap: Spacing.six,
+    gap: 16,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   cardLabel: {
-    color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 9,
     fontWeight: '900',
-    letterSpacing: 2,
+    letterSpacing: 1.5,
   },
   cardName: {
-    color: '#ffffff',
     fontSize: 20,
     fontWeight: 'bold',
-    marginTop: 4,
+    marginTop: 2,
+  },
+  cardSub: {
+    fontSize: 9,
+    marginTop: 2,
   },
   bloodBadge: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   bloodText: {
-    color: '#dc2626',
+    color: '#ffffff',
     fontWeight: '900',
     fontSize: 18,
   },
   cardMid: {
     flexDirection: 'row',
-    gap: 40,
+    gap: 30,
   },
   infoLabel: {
-    color: 'rgba(255, 255, 255, 0.5)',
     fontSize: 8,
     fontWeight: '800',
-    letterSpacing: 1.5,
+    letterSpacing: 1,
   },
   infoValue: {
-    color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     marginTop: 2,
   },
@@ -570,36 +477,39 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    paddingTop: Spacing.four,
+    paddingTop: 12,
   },
   verifiedText: {
-    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   logoText: {
-    color: '#ffffff',
-    fontSize: 18,
+    fontSize: 11,
+    fontWeight: 'bold',
   },
   settingsForm: {
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
-    borderRadius: 28,
-    padding: Spacing.five,
-    gap: 16,
+    gap: 14,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginBottom: 4,
   },
   formGroup: {
-    gap: 6,
+    gap: 4,
   },
   fieldLabel: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 9,
+    fontWeight: 'bold',
   },
   input: {
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     fontSize: 13,
   },
   horizontalSelector: {
@@ -627,20 +537,18 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     borderWidth: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   genderBtnText: {
     fontSize: 12,
     fontWeight: 'bold',
   },
   locationBox: {
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    padding: Spacing.three,
-    gap: Spacing.two,
-    marginTop: 4,
+    padding: 12,
+    gap: 8,
   },
   locationTitle: {
     fontSize: 12,
@@ -649,11 +557,8 @@ const styles = StyleSheet.create({
   locateBtn: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ef4444',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   locateBtnText: {
     fontSize: 11,
@@ -662,7 +567,6 @@ const styles = StyleSheet.create({
   coordinatesRow: {
     flexDirection: 'row',
     gap: 16,
-    marginTop: 8,
   },
   coordCol: {
     flex: 1,
@@ -673,65 +577,48 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   saveBtn: {
-    backgroundColor: '#dc2626',
-    borderRadius: 16,
+    borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
   saveBtnText: {
     color: '#ffffff',
-    fontWeight: 'bold',
-    fontSize: 14,
+    fontWeight: '900',
+    fontSize: 12,
   },
   successBox: {
-    backgroundColor: 'rgba(52, 211, 153, 0.1)',
+    backgroundColor: 'rgba(0, 255, 148, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.25)',
-    borderRadius: 12,
-    padding: Spacing.two,
+    borderColor: 'rgba(0, 255, 148, 0.3)',
+    borderRadius: 14,
+    padding: 12,
   },
   successText: {
-    color: '#34d399',
+    color: '#00FF94',
     fontSize: 12,
     fontWeight: 'bold',
     textAlign: 'center',
   },
   errorBox: {
-    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+    backgroundColor: 'rgba(255, 0, 51, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(220, 38, 38, 0.25)',
-    borderRadius: 12,
-    padding: Spacing.two,
+    borderColor: 'rgba(255, 0, 51, 0.3)',
+    borderRadius: 14,
+    padding: 12,
   },
   errorText: {
-    color: '#ef4444',
+    color: '#FF5357',
     fontSize: 12,
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: Spacing.three,
-  },
-  rewardsCard: {
-    borderWidth: 1,
-    borderRadius: 24,
-    padding: Spacing.four,
-  },
-  rewardsInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
   qrBox: {
+    borderRadius: 20,
+    padding: 20,
     borderWidth: 1,
-    borderRadius: 24,
-    padding: Spacing.five,
     alignItems: 'center',
-    gap: Spacing.four,
+    gap: 12,
   },
   qrLabel: {
     fontSize: 10,
@@ -740,7 +627,7 @@ const styles = StyleSheet.create({
   },
   qrContainer: {
     padding: 12,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
   },
   qrRow: {
@@ -753,42 +640,15 @@ const styles = StyleSheet.create({
   qrDesc: {
     fontSize: 10,
     textAlign: 'center',
-    lineHeight: 14,
-    paddingHorizontal: Spacing.four,
-  },
-  statusCard: {
-    borderWidth: 1,
-    borderRadius: 24,
-    padding: Spacing.five,
-    gap: Spacing.two,
-  },
-  statusEligible: {
-    backgroundColor: 'rgba(52, 211, 153, 0.05)',
-    borderColor: 'rgba(52, 211, 153, 0.25)',
-  },
-  statusCooling: {
-    backgroundColor: 'rgba(248, 113, 113, 0.05)',
-    borderColor: 'rgba(248, 113, 113, 0.25)',
-  },
-  statusTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  statusDesc: {
-    fontSize: 12,
-    lineHeight: 18,
   },
   logoutBtn: {
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: Spacing.three,
-    marginBottom: Spacing.four,
   },
   logoutBtnText: {
-    fontSize: 13,
-    fontWeight: 'bold',
+    fontWeight: '900',
+    fontSize: 12,
   },
 });

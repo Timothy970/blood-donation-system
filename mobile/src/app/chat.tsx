@@ -1,13 +1,15 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useContext } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { Spacing, MaxContentWidth } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { ThemeContext } from '@/context/theme-context';
 import { mobileApi, ChatRow, Message, getWebSocketUrl, getCurrentUser } from '@/utils/api';
 
 export default function ChatScreen() {
   const theme = useTheme();
+  const { colorScheme, toggleColorScheme } = useContext(ThemeContext);
   const params = useLocalSearchParams();
   const otherIdParam = params.other_id;
 
@@ -24,17 +26,17 @@ export default function ChatScreen() {
   const loadChats = async (selectOtherId?: number) => {
     try {
       const data = await mobileApi.chats.list();
-      setChats(data);
+      setChats(data || []);
       
       if (selectOtherId) {
-        const active = data.find(c => c.other_user.id === selectOtherId);
+        const active = data?.find(c => c.other_user.id === selectOtherId);
         if (active) {
           setActiveChat(active);
           loadMessages(selectOtherId);
         } else {
           // Stub a chat row using users list
           const users = await mobileApi.chats.users();
-          const target = users.find((u: any) => u.id === selectOtherId);
+          const target = users?.find((u: any) => u.id === selectOtherId);
           if (target) {
             const newRow: ChatRow = {
               chat_id: 0,
@@ -63,7 +65,7 @@ export default function ChatScreen() {
   const loadMessages = async (otherId: number) => {
     try {
       const data = await mobileApi.chats.messages(otherId);
-      setMessages(data);
+      setMessages(data || []);
       await mobileApi.chats.markRead(otherId);
     } catch (err) {
       console.log('Failed to load chat messages on mobile:', err);
@@ -150,33 +152,41 @@ export default function ChatScreen() {
   return (
     <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        {/* Header */}
+        {/* Standardized Header with Theme Toggle */}
         <View style={[styles.header, { borderBottomColor: theme.backgroundSelected }]}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>Conversations</Text>
-          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Coordinate donations in real-time</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={[styles.statusDot, { backgroundColor: theme.bioGreen }]} />
+              <Text style={[styles.headerTitle, { color: theme.text }]}>Encrypted Live Chat</Text>
+            </View>
+            <TouchableOpacity onPress={toggleColorScheme} style={[styles.themeToggleBtn, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+              <Text style={{ fontSize: 16 }}>{colorScheme === 'dark' ? '☀️' : '🌙'}</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.headerSubtitle, { color: theme.secondary }]}>REAL-TIME WEBSOCKET ENCRYPTED CHAT CHANNEL</Text>
         </View>
 
         {loading ? (
-          <ActivityIndicator color="#dc2626" style={{ marginVertical: 40 }} />
+          <ActivityIndicator color={theme.primary} style={{ marginVertical: 40 }} />
         ) : activeChat ? (
-          /* Active Chat overlay / room */
+          /* Active Chat Room Overlay */
           <KeyboardAvoidingView 
             style={{ flex: 1 }} 
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >
-            <View style={[styles.activeHeader, { borderBottomColor: theme.backgroundSelected }]}>
+            <View style={[styles.activeHeader, { backgroundColor: theme.backgroundElement, borderBottomColor: theme.backgroundSelected }]}>
               <TouchableOpacity onPress={() => setActiveChat(null)} style={styles.backButton}>
-                <Text style={{ color: '#dc2626', fontWeight: 'bold' }}>← Back</Text>
+                <Text style={{ color: theme.primary, fontWeight: 'bold' }}>← Back</Text>
               </TouchableOpacity>
               <Text style={[styles.activeTitle, { color: theme.text }]}>{activeChat.other_user.username}</Text>
               <View style={[styles.bloodBadge, { backgroundColor: theme.backgroundSelected }]}>
-                <Text style={[styles.bloodText, { color: '#dc2626' }]}>
-                  {activeChat.other_user.profile?.blood_type || 'O-'}
+                <Text style={{ color: theme.primary, fontWeight: 'bold', fontSize: 12 }}>
+                  {activeChat.other_user.profile?.blood_type || 'A+'}
                 </Text>
               </View>
             </View>
 
-            {/* Messages scrolling list */}
+            {/* Messages List */}
             <ScrollView 
               style={styles.messagesList}
               ref={scrollViewRef}
@@ -199,74 +209,74 @@ export default function ChatScreen() {
                     >
                       <View 
                         style={[
-                          styles.msgBubble,
+                          styles.msgBubble, 
                           isMine 
-                            ? { backgroundColor: '#dc2626' } 
-                            : { backgroundColor: theme.backgroundElement, borderWidth: 1, borderColor: theme.backgroundSelected }
+                            ? { backgroundColor: theme.primaryNeon, borderBottomRightRadius: 2 } 
+                            : { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected, borderWidth: 1, borderBottomLeftRadius: 2 }
                         ]}
                       >
                         <Text style={{ color: isMine ? '#ffffff' : theme.text, fontSize: 13 }}>
                           {msg.content}
                         </Text>
+                        <Text style={{ color: isMine ? 'rgba(255, 255, 255, 0.7)' : theme.textSecondary, fontSize: 9, marginTop: 4, textAlign: 'right' }}>
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
                       </View>
-                      <Text style={[styles.msgTime, { color: theme.textSecondary }]}>
-                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </Text>
                     </View>
                   );
                 })
               )}
             </ScrollView>
 
-            {/* Input bar */}
-            <View style={[styles.inputContainer, { backgroundColor: theme.backgroundElement, borderTopColor: theme.backgroundSelected }]}>
+            {/* Input Bar */}
+            <View style={[styles.inputBar, { backgroundColor: theme.backgroundElement, borderTopColor: theme.backgroundSelected }]}>
               <TextInput
-                style={[styles.textInput, { color: theme.text, backgroundColor: theme.background }]}
-                placeholder="Type message..."
+                style={[styles.msgInput, { color: theme.text, backgroundColor: theme.backgroundDim, borderColor: theme.backgroundSelected }]}
+                placeholder="Type a message..."
                 placeholderTextColor={theme.textSecondary}
                 value={inputMessage}
                 onChangeText={setInputMessage}
+                onSubmitEditing={handleSendMessage}
               />
-              <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
-                <Text style={styles.sendButtonText}>Send</Text>
+              <TouchableOpacity style={[styles.sendBtn, { backgroundColor: theme.primaryNeon }]} onPress={handleSendMessage}>
+                <Text style={{ color: '#ffffff', fontWeight: 'bold', fontSize: 12 }}>Send</Text>
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
         ) : (
-          /* List of chats */
-          <ScrollView style={styles.chatsList}>
+          /* Chat List Sidebar */
+          <ScrollView style={styles.chatListScroll}>
             {chats.length === 0 ? (
-              <View style={styles.emptyChatsBox}>
-                <Text style={[styles.emptyChatsText, { color: theme.textSecondary }]}>No active chats found.</Text>
+              <View style={[styles.emptyBox, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                <Text style={{ color: theme.text, fontWeight: 'bold', fontSize: 14 }}>No Active Conversations</Text>
+                <Text style={{ color: theme.textSecondary, fontSize: 11, textAlign: 'center', marginTop: 4 }}>
+                  Browse the Donors Directory to initiate direct messaging.
+                </Text>
               </View>
             ) : (
               chats.map((row) => (
                 <TouchableOpacity
-                  key={row.other_user.id}
-                  style={[styles.chatRow, { borderBottomColor: theme.backgroundSelected }]}
+                  key={row.chat_id || row.other_user.id}
+                  style={[styles.chatRowItem, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}
                   onPress={() => handleSelectChat(row)}
                 >
-                  <View style={[styles.avatar, { backgroundColor: theme.backgroundSelected }]}>
-                    <Text style={{ color: theme.text, fontWeight: 'bold' }}>
-                      {row.other_user.username.substring(0, 2).toUpperCase()}
-                    </Text>
-                  </View>
-                  
-                  <View style={{ flex: 1, marginLeft: 12 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <Text style={[styles.rowTitle, { color: theme.text }]}>{row.other_user.username}</Text>
-                      <Text style={{ color: theme.textSecondary, fontSize: 10 }}>
-                        {row.timestamp ? new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                      </Text>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={[styles.otherUsername, { color: theme.text }]}>{row.other_user.username}</Text>
+                      <View style={[styles.bloodPill, { backgroundColor: theme.backgroundSelected }]}>
+                        <Text style={{ color: theme.primary, fontWeight: 'bold', fontSize: 10 }}>
+                          {row.other_user.profile?.blood_type || 'A+'}
+                        </Text>
+                      </View>
                     </View>
-                    <Text style={[styles.rowMessage, { color: theme.textSecondary }]} numberOfLines={1}>
-                      {row.latest_message || 'Start chatting...'}
+                    <Text style={[styles.latestMsg, { color: theme.textSecondary }]} numberOfLines={1}>
+                      {row.latest_message || 'Tap to view conversation'}
                     </Text>
                   </View>
-                  
+
                   {row.unread_count > 0 && (
-                    <View style={styles.unreadBadge}>
-                      <Text style={styles.unreadBadgeText}>{row.unread_count}</Text>
+                    <View style={[styles.unreadBadge, { backgroundColor: theme.primaryNeon }]}>
+                      <Text style={styles.unreadText}>{row.unread_count}</Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -293,71 +303,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    marginTop: 4,
-    fontWeight: '600',
-  },
-  chatsList: {
-    flex: 1,
-  },
-  chatRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.three,
-    borderBottomWidth: 1,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rowTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  rowMessage: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  unreadBadge: {
-    backgroundColor: '#dc2626',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  unreadBadgeText: {
-    color: '#ffffff',
-    fontSize: 10,
+    fontSize: 18,
     fontWeight: '900',
   },
-  emptyChatsBox: {
-    padding: 64,
-    alignItems: 'center',
+  themeToggleBtn: {
+    padding: 8,
+    borderRadius: 10,
+    borderWidth: 1,
   },
-  emptyChatsText: {
-    fontSize: 12,
+  headerSubtitle: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginTop: 4,
+    letterSpacing: 1.2,
   },
-  // Active Chat Styles
   activeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: 12,
     borderBottomWidth: 1,
+    gap: 12,
   },
   backButton: {
-    paddingRight: 16,
+    paddingVertical: 4,
+    paddingRight: 8,
   },
   activeTitle: {
     fontSize: 15,
@@ -365,67 +342,100 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bloodBadge: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-  },
-  bloodText: {
-    fontSize: 11,
-    fontWeight: 'bold',
+    borderRadius: 10,
   },
   messagesList: {
     flex: 1,
-    padding: Spacing.three,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: 12,
   },
   emptyChatText: {
-    fontSize: 12,
     textAlign: 'center',
-    marginVertical: 40,
+    marginTop: 40,
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   msgRow: {
-    marginBottom: Spacing.two,
-    maxWidth: '80%',
+    marginVertical: 4,
+    flexDirection: 'row',
   },
   myMsgRow: {
-    alignSelf: 'flex-end',
-    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
   },
   otherMsgRow: {
-    alignSelf: 'flex-start',
-    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
   },
   msgBubble: {
-    borderRadius: 16,
-    padding: 12,
+    maxWidth: '80%',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  msgTime: {
-    fontSize: 9,
-    marginTop: 4,
-    paddingHorizontal: 4,
-  },
-  inputContainer: {
+  inputBar: {
     flexDirection: 'row',
-    padding: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: 10,
     borderTopWidth: 1,
+    gap: 8,
     alignItems: 'center',
   },
-  textInput: {
+  msgInput: {
     flex: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     fontSize: 13,
   },
-  sendButton: {
-    backgroundColor: '#dc2626',
-    borderRadius: 20,
+  sendBtn: {
+    borderRadius: 14,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginLeft: 8,
+    paddingVertical: 12,
   },
-  sendButtonText: {
-    color: '#ffffff',
+  chatListScroll: {
+    flex: 1,
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.four,
+  },
+  emptyBox: {
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  chatRowItem: {
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  otherUsername: {
+    fontSize: 14,
     fontWeight: 'bold',
-    fontSize: 13,
+  },
+  bloodPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  latestMsg: {
+    fontSize: 11,
+    marginTop: 4,
+  },
+  unreadBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  unreadText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });

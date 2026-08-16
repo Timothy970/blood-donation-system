@@ -1,141 +1,137 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
+@layer base {
+  :root {
+    --font-sora: 'Sora', sans-serif;
+    --font-inter: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
 
-:root {
-  --background: 210 40% 98%;
-  --foreground: 222 47% 11%;
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --primary: 348 83% 47%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222 47% 11%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 348 83% 47%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 348 83% 47%;
-  --radius: 0.75rem;
+    --bg-surface: #F8F9FA;
+    --bg-surface-dim: #F1F3F5;
+    --bg-container: #FFFFFF;
+    --bg-container-high: #E9ECEF;
+    --bg-container-highest: #DEE2E6;
+    
+    --primary-crimson: #FF5357;
+    --primary-neon: #FF0033;
+    --secondary-cyan: #0096C7;
+    --secondary-cyan-bright: #00F1FE;
+    
+    --text-primary: #1A1A1A;
+    --text-muted: #6C757D;
+    
+    --bio-green: #00A86B;
+    --warning-gold: #D97706;
+    --border-subtle: #E9ECEF;
+  }
 
-  /* Overrides for Tailwind CSS v4 Slate variables in Light Mode */
-  --color-slate-50: #0f172a;
-  --color-slate-100: #1e293b;
-  --color-slate-200: #334155;
-  --color-slate-300: #475569;
-  --color-slate-400: #57657a;
-  --color-slate-500: #64748b;
-  --color-slate-600: #8ba2c0;
-  --color-slate-700: #cbd5e1;
-  --color-slate-800: #e2e8f0;
-  --color-slate-900: #f1f5f9;
-  --color-slate-950: #ffffff;
-}
-
-.dark {
-  --background: 220 25% 10%;
-  --foreground: 210 40% 98%;
-  --card: 222 25% 12%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222 25% 10%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 348 83% 47%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 217 32% 17%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217 32% 17%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 348 83% 47%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217 32% 17%;
-  --input: 217 32% 17%;
-  --ring: 348 83% 47%;
-
-  /* Reset default slate colors in Dark Mode */
-  --color-slate-50: #f8fafc;
-  --color-slate-100: #f1f5f9;
-  --color-slate-200: #e2e8f0;
-  --color-slate-300: #cbd5e1;
-  --color-slate-400: #94a3b8;
-  --color-slate-500: #64748b;
-  --color-slate-600: #475569;
-  --color-slate-700: #334155;
-  --color-slate-800: #1e293b;
-  --color-slate-900: #0f172a;
-  --color-slate-950: #020617;
+  html.dark {
+    --bg-surface: #131314;
+    --bg-surface-dim: #0E0E0F;
+    --bg-container: #1C1B1C;
+    --bg-container-high: #2A2A2B;
+    --bg-container-highest: #353436;
+    
+    --primary-crimson: #FF5357;
+    --primary-neon: #FF0033;
+    --secondary-cyan: #00F1FE;
+    --secondary-cyan-bright: #74F5FF;
+    
+    --text-primary: #E5E2E3;
+    --text-muted: #919095;
+    
+    --bio-green: #00FF94;
+    --warning-gold: #FFAB00;
+    --border-subtle: #2A2A2B;
+  }
 }
 
 body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: hsl(var(--background));
-}
-::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--primary));
+/* Typography Helpers */
+.font-headline {
+  font-family: var(--font-sora), system-ui, sans-serif;
 }
 
-/* Glassmorphism utility */
-.glass {
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+.font-mono-hud {
+  font-family: var(--font-mono), monospace;
 }
 
-.dark .glass {
-  background: rgba(15, 23, 42, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+/* Glassmorphism & Cyber-Medical Container */
+.glass-card {
+  background: var(--bg-container);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
-/* Pulsing red animation for SOS Alerts */
-@keyframes heartPulse {
+.glass-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-hover:hover {
+  border-color: rgba(255, 83, 87, 0.4);
+  box-shadow: 0 0 25px rgba(255, 0, 51, 0.15);
+  transform: translateY(-2px);
+}
+
+.hud-panel {
+  background: var(--bg-surface-dim);
+  border: 1px solid var(--border-subtle);
+}
+
+.glow-crimson {
+  box-shadow: 0 0 25px rgba(255, 0, 51, 0.35);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 25px rgba(0, 241, 254, 0.35);
+}
+
+/* Pulse indicator animation */
+@keyframes pulseDot {
   0% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 0, 51, 0.7);
   }
   70% {
-    transform: scale(1.05);
-    box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+    transform: scale(1.1);
+    box-shadow: 0 0 0 10px rgba(255, 0, 51, 0);
   }
   100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 0, 51, 0);
   }
 }
 
-.pulse-sos {
-  animation: heartPulse 2s infinite;
+.pulse-active {
+  animation: pulseDot 2s infinite;
 }
 
-/* Floating animation */
-@keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-  100% { transform: translateY(0px); }
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(1000%); }
 }
 
-.animate-float {
-  animation: float 4s ease-in-out infinite;
+.scanline-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.scanline-effect::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.3;
 }

@@ -1,32 +1,37 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, ScrollView, View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useContext } from 'react';
+import { StyleSheet, ScrollView, View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { ThemeContext } from '@/context/theme-context';
 import { mobileApi, AdminStats, Booking, BloodRequest } from '@/utils/api';
 
 export default function AdminScreen() {
   const theme = useTheme();
+  const { colorScheme, toggleColorScheme } = useContext(ThemeContext);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'alerts'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'alerts' | 'users'>('overview');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [requests, setRequests] = useState<BloodRequest[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
 
   const loadAdminData = async () => {
     setErrorMsg('');
     try {
-      const [statsData, bookingsData, requestsData] = await Promise.all([
+      const [statsData, bookingsData, requestsData, usersData] = await Promise.all([
         mobileApi.admin.getStats(),
         mobileApi.admin.listBookings(),
         mobileApi.admin.listRequests(),
+        mobileApi.admin.listUsers(),
       ]);
       setStats(statsData);
-      setBookings(bookingsData);
-      setRequests(requestsData);
+      setBookings(bookingsData || []);
+      setRequests(requestsData || []);
+      setUsers(usersData || []);
     } catch (err: any) {
       console.log('Failed to fetch admin dashboard records:', err);
       setErrorMsg(err.message || 'Failed to query administration services.');
@@ -51,215 +56,245 @@ export default function AdminScreen() {
     }
   };
 
-  const handleDeleteRequest = async (id: number) => {
-    setRefreshing(true);
-    try {
-      await mobileApi.admin.deleteRequest(id);
-      await loadAdminData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to delete SOS alert.');
-      setRefreshing(false);
-    }
+  const handleDeleteRequest = (id: number) => {
+    Alert.alert(
+      'Resolve SOS Request',
+      'Are you sure you want to resolve and delete this SOS request?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Resolve',
+          style: 'destructive',
+          onPress: async () => {
+            setRefreshing(true);
+            try {
+              await mobileApi.admin.deleteRequest(id);
+              await loadAdminData();
+            } catch (err: any) {
+              setErrorMsg(err.message || 'Failed to delete SOS alert.');
+              setRefreshing(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleDeleteUser = (id: number, username: string) => {
+    Alert.alert(
+      'Caution: Delete Account',
+      `Are you sure you want to permanently delete user "${username}"? This deletes all profiles, logs, and booking contexts.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setRefreshing(true);
+            try {
+              await mobileApi.admin.deleteUser(id);
+              await loadAdminData();
+            } catch (err: any) {
+              setErrorMsg(err.message || 'Failed to delete user.');
+              setRefreshing(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (
     <View style={[styles.wrapper, { backgroundColor: theme.background }]}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        {/* Header */}
+        {/* Standardized Header with Theme Toggle */}
         <View style={[styles.header, { borderBottomColor: theme.backgroundSelected }]}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>Admin Console</Text>
-          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Oversee medical bookings and active emergency SOS coordinates</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={[styles.statusDot, { backgroundColor: theme.primary }]} />
+              <Text style={[styles.headerTitle, { color: theme.text }]}>Admin Console</Text>
+            </View>
+            <TouchableOpacity onPress={toggleColorScheme} style={[styles.themeToggleBtn, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+              <Text style={{ fontSize: 16 }}>{colorScheme === 'dark' ? '☀️' : '🌙'}</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.headerSubtitle, { color: theme.secondary }]}>GLOBAL OVERSIGHT OF MATCHES, SCHEDULED SLOTS & USER REGISTRIES</Text>
         </View>
 
         {/* Custom Segmented Tabs */}
         <View style={[styles.tabBar, { borderBottomColor: theme.backgroundSelected }]}>
           <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'overview' && { borderBottomColor: '#dc2626' }]}
+            style={[styles.tabButton, activeTab === 'overview' && { borderBottomColor: theme.primaryNeon }]}
             onPress={() => setActiveTab('overview')}
           >
-            <Text style={[styles.tabLabel, { color: activeTab === 'overview' ? '#ef4444' : theme.textSecondary }]}>
+            <Text style={[styles.tabLabel, { color: activeTab === 'overview' ? theme.primary : theme.textSecondary }]}>
               Overview
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'bookings' && { borderBottomColor: '#dc2626' }]}
+            style={[styles.tabButton, activeTab === 'bookings' && { borderBottomColor: theme.primaryNeon }]}
             onPress={() => setActiveTab('bookings')}
           >
-            <Text style={[styles.tabLabel, { color: activeTab === 'bookings' ? '#ef4444' : theme.textSecondary }]}>
+            <Text style={[styles.tabLabel, { color: activeTab === 'bookings' ? theme.primary : theme.textSecondary }]}>
               Bookings
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'alerts' && { borderBottomColor: '#dc2626' }]}
+            style={[styles.tabButton, activeTab === 'alerts' && { borderBottomColor: theme.primaryNeon }]}
             onPress={() => setActiveTab('alerts')}
           >
-            <Text style={[styles.tabLabel, { color: activeTab === 'alerts' ? '#ef4444' : theme.textSecondary }]}>
+            <Text style={[styles.tabLabel, { color: activeTab === 'alerts' ? theme.primary : theme.textSecondary }]}>
               SOS Alerts
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'users' && { borderBottomColor: theme.primaryNeon }]}
+            onPress={() => setActiveTab('users')}
+          >
+            <Text style={[styles.tabLabel, { color: activeTab === 'users' ? theme.primary : theme.textSecondary }]}>
+              Users
             </Text>
           </TouchableOpacity>
         </View>
 
         {loading ? (
-          <ActivityIndicator color="#dc2626" style={{ marginVertical: 40 }} />
+          <ActivityIndicator size="large" color={theme.primary} style={{ marginVertical: 40 }} />
         ) : (
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-          >
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
             {errorMsg ? (
               <View style={styles.errorBox}>
                 <Text style={styles.errorText}>⚠ {errorMsg}</Text>
               </View>
             ) : null}
 
-            {refreshing && (
-              <ActivityIndicator color="#dc2626" style={{ marginVertical: 10 }} />
-            )}
+            {activeTab === 'overview' && (
+              <View style={{ gap: Spacing.four }}>
+                {/* Stats 2x2 Grid */}
+                <View style={styles.statsGrid}>
+                  <View style={[styles.statCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>MEMBERS</Text>
+                    <Text style={[styles.statValue, { color: theme.text }]}>{stats?.total_users || 0}</Text>
+                  </View>
 
-            {/* OVERVIEW SUB-VIEW */}
-            {activeTab === 'overview' && stats && (
-              <View style={styles.tabContent}>
-                <View style={[styles.statCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
-                  <Text style={[styles.statValue, { color: theme.text }]}>{stats.total_users}</Text>
-                  <Text style={[styles.statLabelText, { color: theme.textSecondary }]}>Registered Members</Text>
+                  <View style={[styles.statCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>DONATIONS</Text>
+                    <Text style={[styles.statValue, { color: theme.text }]}>{stats?.total_donations || 0}</Text>
+                  </View>
+
+                  <View style={[styles.statCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>VOLUME (ML)</Text>
+                    <Text style={[styles.statValue, { color: theme.bioGreen }]}>{stats?.total_donation_volume_ml || 0} ml</Text>
+                  </View>
+
+                  <View style={[styles.statCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>ACTIVE SOS</Text>
+                    <Text style={[styles.statValue, { color: theme.secondary }]}>{stats?.total_active_requests || 0}</Text>
+                  </View>
                 </View>
 
-                <View style={[styles.statCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
-                  <Text style={[styles.statValue, { color: theme.text }]}>{stats.total_donations}</Text>
-                  <Text style={[styles.statLabelText, { color: theme.textSecondary }]}>Completed Donations</Text>
-                </View>
-
-                <View style={[styles.statCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
-                  <Text style={[styles.statValue, { color: theme.text }]}>{(stats.total_donation_volume_ml / 1000).toFixed(1)}L</Text>
-                  <Text style={[styles.statLabelText, { color: theme.textSecondary }]}>Volume Collected</Text>
-                </View>
-
-                <View style={[styles.statCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
-                  <Text style={[styles.statValue, { color: '#eab308' }]}>{stats.total_active_bookings}</Text>
-                  <Text style={[styles.statLabelText, { color: theme.textSecondary }]}>Pending Bookings</Text>
-                </View>
-
-                <View style={[styles.statCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
-                  <Text style={[styles.statValue, { color: '#ef4444' }]}>{stats.total_active_requests}</Text>
-                  <Text style={[styles.statLabelText, { color: theme.textSecondary }]}>Emergency SOS Requests</Text>
+                {/* Operations Checklist */}
+                <View style={[styles.checklistCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                  <Text style={[styles.sectionTitle, { color: theme.text }]}>📋 Administrative Operations Checklist</Text>
+                  <Text style={[styles.checkText, { color: theme.textSecondary }]}>
+                    • <Text style={{ color: theme.text, fontWeight: 'bold' }}>Bookings:</Text> Verify intake completions and issue matching XP rewards.
+                  </Text>
+                  <Text style={[styles.checkText, { color: theme.textSecondary }]}>
+                    • <Text style={{ color: theme.text, fontWeight: 'bold' }}>SOS Alerts:</Text> Clear emergency broadcasts that have been fulfilled.
+                  </Text>
+                  <Text style={[styles.checkText, { color: theme.textSecondary }]}>
+                    • <Text style={{ color: theme.text, fontWeight: 'bold' }}>Users:</Text> Audit member records and manage clinic permissions.
+                  </Text>
                 </View>
               </View>
             )}
 
-            {/* BOOKINGS SUB-VIEW */}
             {activeTab === 'bookings' && (
-              <View style={styles.tabContent}>
-                <Text style={[styles.sectionHeading, { color: theme.text }]}>All Clinical Appointments</Text>
+              <View style={{ gap: Spacing.three }}>
+                <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>APPOINTMENT BOOKINGS MANAGEMENT</Text>
                 {bookings.length === 0 ? (
-                  <Text style={{ color: theme.textSecondary, fontStyle: 'italic', marginVertical: 20 }}>
-                    No bookings found in the system.
-                  </Text>
+                  <View style={[styles.emptyCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                    <Text style={{ color: theme.textSecondary, fontSize: 12 }}>No user bookings recorded.</Text>
+                  </View>
                 ) : (
-                  bookings.map((booking) => (
-                    <View
-                      key={booking.id}
-                      style={[styles.bookingCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}
-                    >
-                      <View style={styles.bookingCardHeader}>
-                        <Text style={[styles.bookingName, { color: theme.text }]}>
-                          {booking.first_name} {booking.last_name}
-                        </Text>
-                        <View style={[
-                          styles.statusBadge,
-                          booking.status === 'Completed' && { backgroundColor: 'rgba(52, 211, 153, 0.15)' },
-                          booking.status === 'Cancelled' && { backgroundColor: 'rgba(239, 68, 68, 0.15)' },
-                          booking.status === 'Pending' && { backgroundColor: 'rgba(234, 179, 8, 0.15)' },
-                        ]}>
-                          <Text style={[
-                            styles.statusText,
-                            booking.status === 'Completed' && { color: '#34d399' },
-                            booking.status === 'Cancelled' && { color: '#ef4444' },
-                            booking.status === 'Pending' && { color: '#eab308' },
-                          ]}>
-                            {booking.status}
-                          </Text>
-                        </View>
+                  bookings.map((b) => (
+                    <View key={b.id} style={[styles.itemCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={[styles.itemTitle, { color: theme.text }]}>{b.first_name} {b.last_name}</Text>
+                        <Text style={{ color: theme.textSecondary, fontSize: 11 }}>📍 {b.location}</Text>
+                        <Text style={{ color: theme.textSecondary, fontSize: 11 }}>📅 {new Date(b.date).toLocaleDateString()} at {b.time_slot}</Text>
                       </View>
-
-                      <View style={styles.bookingDetails}>
-                        <Text style={[styles.detailsText, { color: theme.textSecondary }]}>
-                          📅 {new Date(booking.date).toLocaleDateString()} | ⏰ {booking.time_slot}
-                        </Text>
-                        <Text style={[styles.detailsText, { color: theme.textSecondary }]}>
-                          📍 {booking.location}
-                        </Text>
-                      </View>
-
-                      {booking.status === 'Pending' && (
-                        <View style={styles.bookingActions}>
-                          <TouchableOpacity
-                            style={[styles.actionBtn, styles.completeBtn]}
-                            onPress={() => handleUpdateBooking(booking.id, 'Completed')}
-                          >
-                            <Text style={styles.actionBtnText}>✓ Complete</Text>
-                          </TouchableOpacity>
-
-                          <TouchableOpacity
-                            style={[styles.actionBtn, styles.cancelBtn]}
-                            onPress={() => handleUpdateBooking(booking.id, 'Cancelled')}
-                          >
-                            <Text style={styles.actionBtnText}>✕ Cancel</Text>
-                          </TouchableOpacity>
+                      <View style={{ gap: 6, alignItems: 'flex-end' }}>
+                        <View style={[styles.statusBadge, { backgroundColor: theme.backgroundSelected }]}>
+                          <Text style={{ color: theme.primary, fontWeight: 'bold', fontSize: 10 }}>{b.status}</Text>
                         </View>
-                      )}
+                        {b.status === 'Pending' && (
+                          <TouchableOpacity
+                            style={[styles.verifyBtn, { backgroundColor: 'rgba(0, 255, 148, 0.15)', borderColor: 'rgba(0, 255, 148, 0.4)' }]}
+                            onPress={() => handleUpdateBooking(b.id, 'Completed')}
+                          >
+                            <Text style={{ color: theme.bioGreen, fontWeight: 'bold', fontSize: 10 }}>✓ Verify Complete</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
                   ))
                 )}
               </View>
             )}
 
-            {/* SOS ALERTS SUB-VIEW */}
             {activeTab === 'alerts' && (
-              <View style={styles.tabContent}>
-                <Text style={[styles.sectionHeading, { color: theme.text }]}>Active SOS Signals</Text>
+              <View style={{ gap: Spacing.three }}>
+                <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>EMERGENCY SOS BROADCASTS</Text>
                 {requests.length === 0 ? (
-                  <Text style={{ color: theme.textSecondary, fontStyle: 'italic', marginVertical: 20 }}>
-                    No active SOS requests registered.
-                  </Text>
+                  <View style={[styles.emptyCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                    <Text style={{ color: theme.textSecondary, fontSize: 12 }}>No emergency SOS alerts active.</Text>
+                  </View>
                 ) : (
-                  requests.map((req) => (
-                    <View
-                      key={req.id}
-                      style={[styles.bookingCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}
-                    >
-                      <View style={styles.bookingCardHeader}>
-                        <Text style={[styles.bookingName, { color: theme.text }]}>
-                          {req.first_name} {req.last_name}
-                        </Text>
-                        <View style={styles.bloodTypeBadge}>
-                          <Text style={styles.bloodTypeBadgeText}>{req.blood_type}</Text>
-                        </View>
+                  requests.map((r) => (
+                    <View key={r.id} style={[styles.itemCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={[styles.itemTitle, { color: theme.text }]}>{r.first_name} {r.last_name}</Text>
+                        <Text style={{ color: theme.secondary, fontSize: 11 }}>📍 {r.location}</Text>
+                        <Text style={{ color: theme.textSecondary, fontSize: 11 }}>📞 {r.contact_number}</Text>
                       </View>
+                      <TouchableOpacity
+                        style={[styles.resolveBtn, { backgroundColor: 'rgba(255, 0, 51, 0.15)', borderColor: 'rgba(255, 0, 51, 0.4)' }]}
+                        onPress={() => handleDeleteRequest(r.id)}
+                      >
+                        <Text style={{ color: theme.primary, fontWeight: 'bold', fontSize: 10 }}>Resolve SOS</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                )}
+              </View>
+            )}
 
-                      <View style={styles.bookingDetails}>
-                        <Text style={[styles.detailsText, { color: theme.textSecondary }]}>
-                          📞 {req.contact_number}
-                        </Text>
-                        <Text style={[styles.detailsText, { color: theme.textSecondary }]}>
-                          📍 {req.location}
-                        </Text>
-                        {req.latitude && req.longitude ? (
-                          <Text style={[styles.detailsText, { color: theme.textSecondary, fontSize: 10, fontFamily: 'monospace' }]}>
-                            🛰 {req.latitude.toFixed(5)}, {req.longitude.toFixed(5)}
-                          </Text>
-                        ) : null}
+            {activeTab === 'users' && (
+              <View style={{ gap: Spacing.three }}>
+                <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>REGISTERED MEMBER DIRECTORY</Text>
+                {users.length === 0 ? (
+                  <View style={[styles.emptyCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                    <Text style={{ color: theme.textSecondary, fontSize: 12 }}>No registered members found.</Text>
+                  </View>
+                ) : (
+                  users.map((u) => (
+                    <View key={u.id} style={[styles.itemCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={[styles.itemTitle, { color: theme.text }]}>{u.username}</Text>
+                        <Text style={{ color: theme.textSecondary, fontSize: 11 }}>✉ {u.email}</Text>
+                        <Text style={{ color: theme.textSecondary, fontSize: 11 }}>Blood Group: {u.profile?.blood_type || 'A+'}</Text>
                       </View>
-
-                      <View style={styles.bookingActions}>
+                      {u.role !== 'admin' && (
                         <TouchableOpacity
-                          style={[styles.actionBtn, styles.resolveBtn]}
-                          onPress={() => handleDeleteRequest(req.id)}
+                          style={[styles.resolveBtn, { backgroundColor: 'rgba(255, 0, 51, 0.15)', borderColor: 'rgba(255, 0, 51, 0.4)' }]}
+                          onPress={() => handleDeleteUser(u.id, u.username)}
                         >
-                          <Text style={styles.actionBtnText}>Resolve / Close Request</Text>
+                          <Text style={{ color: theme.primary, fontWeight: 'bold', fontSize: 10 }}>Purge User</Text>
                         </TouchableOpacity>
-                      </View>
+                      )}
                     </View>
                   ))
                 )}
@@ -286,147 +321,133 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  themeToggleBtn: {
+    padding: 8,
+    borderRadius: 10,
+    borderWidth: 1,
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: 9,
+    fontWeight: 'bold',
     marginTop: 4,
-    fontWeight: '600',
+    letterSpacing: 1.2,
   },
   tabBar: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    height: 48,
   },
   tabButton: {
     flex: 1,
-    justifyContent: 'center',
+    paddingVertical: 12,
     alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
   tabLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 'bold',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: BottomTabInset + Spacing.six,
+    paddingBottom: BottomTabInset + 60,
     paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.five,
+    paddingTop: Spacing.four,
+    gap: Spacing.four,
   },
   errorBox: {
-    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+    backgroundColor: 'rgba(255, 0, 51, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(220, 38, 38, 0.25)',
-    borderRadius: 12,
-    padding: Spacing.two,
-    marginBottom: Spacing.four,
+    borderColor: 'rgba(255, 0, 51, 0.3)',
+    borderRadius: 14,
+    padding: 12,
   },
   errorText: {
-    color: '#ef4444',
+    color: '#FF5357',
     fontSize: 12,
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  tabContent: {
-    gap: 16,
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   statCard: {
+    width: '48%',
+    borderRadius: 18,
+    padding: 14,
     borderWidth: 1,
-    borderRadius: 20,
-    padding: Spacing.four,
-    alignItems: 'center',
+    gap: 4,
+  },
+  statLabel: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   statValue: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '900',
   },
-  statLabelText: {
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  sectionHeading: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  bookingCard: {
-    borderWidth: 1,
+  checklistCard: {
     borderRadius: 20,
-    padding: Spacing.four,
-    gap: Spacing.three,
+    padding: 16,
+    borderWidth: 1,
+    gap: 8,
   },
-  bookingCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  checkText: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  emptyCard: {
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
     alignItems: 'center',
   },
-  bookingName: {
+  itemCard: {
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  itemTitle: {
     fontSize: 14,
     fontWeight: 'bold',
   },
   statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  verifyBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 8,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 4,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  bookingDetails: {
-    gap: 4,
-  },
-  detailsText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  bookingActions: {
-    flexDirection: 'row',
-    gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
-    paddingTop: Spacing.three,
-  },
-  actionBtn: {
-    flex: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  completeBtn: {
-    backgroundColor: '#059669',
-  },
-  cancelBtn: {
-    backgroundColor: '#dc2626',
+    borderWidth: 1,
   },
   resolveBtn: {
-    backgroundColor: '#dc2626',
-    flex: 1,
-  },
-  actionBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  bloodTypeBadge: {
-    backgroundColor: '#dc2626',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 8,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 4,
-  },
-  bloodTypeBadgeText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-    fontSize: 10,
+    borderWidth: 1,
   },
 });
