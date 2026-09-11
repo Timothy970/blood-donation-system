@@ -15,18 +15,6 @@ The platform is engineered as a decoupled monorepo comprising a high-throughput 
 
 ---
 
-## GitHub Repository Metadata
-
-### Repository Description (About Box)
-> An event-driven, real-time blood donation and emergency SOS dispatch ecosystem featuring live geolocation matching, digital QR donor cards, appointment scheduling, gamified donor rewards, and instant chat. Built with Go (Gin + WebSockets), Next.js 16 (React 19), and React Native (Expo SDK 56).
-
-### Repository Topic Tags
-```text
-blood-donation, emergency-sos, healthcare, golang, gin-gonic, websockets, postgresql, gorm, nextjs, react19, react-native, expo, expo-router, typescript, tailwindcss, real-time, monorepo, healthtech
-```
-
----
-
 ## Table of Contents
 
 - [System Architecture](#system-architecture)
